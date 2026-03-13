@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Community Voice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:#080C18;color:#E4EDFF}
+:root{
+  --bg:#080C18;--s1:#0E1525;--s2:#141D30;--s3:#1B263D;
+  --border:#1E2D45;--gold:#E8A83E;--gold-b:#F5BE64;--gold-d:#4A3310;
+  --teal:#2ECFC0;--text:#E4EDFF;--ts:#7A90C0;--tm:#3A4E72;
+  --ok:#4ADE80;--ok-d:#0C2E18;--err:#F87171;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.fade-up{animation:fadeUp .4s ease forwards}
+
+#app{min-height:100vh;display:flex;flex-direction:column;align-items:stretch;padding:0;max-width:520px;margin:0 auto}
+
+/* HEADER */
+#page-header{padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between}
+#logo{font-family:'Fraunces',serif;font-size:18px;font-weight:500;color:var(--gold)}
+#session-info{font-size:11px;color:var(--tm);text-align:right;line-height:1.4}
+
+/* SCREENS */
+.pane{display:none;flex:1;flex-direction:column;padding:24px;gap:20px}
+.pane.active{display:flex}
+
+/* LOADING */
+#loading-pane{align-items:center;justify-content:center;min-height:70vh}
+#loading-spinner{width:40px;height:40px;border-radius:50%;border:3px solid var(--s3);border-top-color:var(--gold);animation:spin .8s linear infinite}
+#loading-text{font-size:14px;color:var(--tm);margin-top:16px}
+
+/* FORM */
+#q-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.1em;text-transform:uppercase}
+#q-text{font-family:'Fraunces',serif;font-size:22px;font-weight:500;color:var(--text);line-height:1.5;padding:4px 0}
+#anon-note{font-size:12px;color:var(--tm);display:flex;align-items:center;gap:8px}
+#anon-note::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0}
+#resp-input{
+  background:var(--s2);border:1px solid var(--border);border-radius:16px;
+  padding:16px;color:var(--text);font-size:16px;line-height:1.7;
+  resize:none;min-height:140px;width:100%;font-family:'DM Sans',sans-serif;
+  -webkit-appearance:none;
+}
+#resp-input:focus{outline:none;border-color:var(--gold)}
+#resp-input::placeholder{color:var(--tm)}
+#char-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--tm);text-align:right;margin-top:-12px}
+#char-count.warn{color:var(--err)}
+#btn-submit{
+  background:linear-gradient(135deg,var(--gold),var(--gold-b));
+  border:none;border-radius:14px;padding:16px;
+  color:#080C18;font-weight:600;font-size:16px;
+  width:100%;letter-spacing:-.01em;
+}
+#btn-submit:hover{opacity:.92}
+#btn-submit:active{transform:scale(.98)}
+#btn-submit:disabled{background:var(--s3);color:var(--tm);cursor:not-allowed;transform:none}
+#form-err{font-size:13px;color:var(--err);padding:10px 14px;background:#1A0808;border-radius:10px;border:1px solid #401010;display:none}
+
+/* SUCCESS */
+#success-pane{align-items:center;justify-content:center;min-height:70vh;text-align:center;gap:16px}
+#success-mark{font-size:64px;animation:pop .6s cubic-bezier(.34,1.56,.64,1) forwards;color:var(--gold);font-family:'Fraunces',serif;line-height:1}
+#success-head{font-family:'Fraunces',serif;font-size:26px;font-weight:500;color:var(--text)}
+#success-sub{font-size:15px;color:var(--ts);line-height:1.6;max-width:280px}
+#success-q-reminder{font-size:13px;color:var(--tm);font-style:italic;max-width:280px;line-height:1.5;padding:14px 16px;background:var(--s2);border-radius:10px;border:1px solid var(--border)}
+
+/* ERROR */
+#error-pane{align-items:center;justify-content:center;min-height:70vh;text-align:center;gap:16px}
+#error-icon{font-size:48px;color:var(--tm)}
+#error-head{font-family:'Fraunces',serif;font-size:22px;color:var(--text)}
+#error-body{font-size:14px;color:var(--ts);line-height:1.6;max-width:300px}
+
+/* FOOTER */
+#page-footer{padding:16px 24px 32px;text-align:center;font-size:11px;color:var(--tm);line-height:1.6}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="page-header">
+    <div id="logo">✦ Community Voice</div>
+    <div id="session-info"></div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loading-pane" class="pane active">
+    <div id="loading-spinner"></div>
+    <div id="loading-text">Loading question…</div>
+  </div>
+
+  <!-- FORM -->
+  <div id="form-pane" class="pane">
+    <div id="q-meta"></div>
+    <div id="q-text"></div>
+    <div id="anon-note">Your response is completely anonymous</div>
+    <textarea id="resp-input" placeholder="Type your response here…" maxlength="1000"></textarea>
+    <div id="char-count">0 / 1000</div>
+    <div id="form-err"></div>
+    <button id="btn-submit" disabled>Submit response</button>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="success-pane" class="pane">
+    <div id="success-mark">✦</div>
+    <div id="success-head">Thank you</div>
+    <div id="success-sub">Your response has been recorded anonymously.</div>
+    <div id="success-q-reminder"></div>
+  </div>
+
+  <!-- ERROR -->
+  <div id="error-pane" class="pane">
+    <div id="error-icon">✕</div>
+    <div id="error-head">Something went wrong</div>
+    <div id="error-body"></div>
+  </div>
+
+  <div id="page-footer">Anonymous · Secure · Community Voice by SSF</div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
+import { getFirestore, collection, addDoc, getDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAW1A6djClIP8NZf5vHXlapJJ_6AI9AJKE",
+  authDomain: "community-voice-177112828.firebaseapp.com",
+  projectId: "community-voice-177112828",
+  storageBucket: "community-voice-177112828.firebasestorage.app",
+  messagingSenderId: "277351730334",
+  appId: "1:277351730334:web:cc1e95818fb7b28c563f8f"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+function showPane(id) {
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showError(msg) {
+  showPane('error-pane');
+  document.getElementById('error-body').textContent = msg;
+}
+
+// Parse URL params
+const params = new URLSearchParams(window.location.search);
+const sessionId = params.get('s');
+const questionIdx = parseInt(params.get('q')||'0', 10);
+
+if (!sessionId) {
+  showError('No session found. Please scan the QR code again.');
+} else {
+  loadQuestion();
+}
+
+async function loadQuestion() {
+  try {
+    const sessionDoc = await getDoc(doc(db, 'sessions', sessionId));
+    if (!sessionDoc.exists()) { showError('This session could not be found. Please check with the facilitator.'); return; }
+    const session = sessionDoc.data();
+    const questions = session.questions || [];
+    if (questionIdx < 0 || questionIdx >= questions.length) { showError('This question could not be found.'); return; }
+    const q = questions[questionIdx];
+
+    // Populate UI
+    document.getElementById('q-meta').textContent = `Question ${questionIdx+1} of ${questions.length}`;
+    document.getElementById('q-text').textContent = q.text;
+    document.getElementById('success-q-reminder').textContent = `"${q.text}"`;
+    document.getElementById('session-info').textContent = [session.name, session.date].filter(Boolean).join('\n');
+
+    showPane('form-pane');
+    document.querySelectorAll('.pane.active > *').forEach((el,i)=>{ el.classList.add('fade-up'); el.style.animationDelay=`${i*60}ms`; });
+  } catch(e) {
+    showError('Failed to load question: ' + e.message);
+  }
+}
+
+// Textarea
+const input = document.getElementById('resp-input');
+const submitBtn = document.getElementById('btn-submit');
+const charCount = document.getElementById('char-count');
+
+input.addEventListener('input', () => {
+  const len = input.value.length;
+  charCount.textContent = `${len} / 1000`;
+  charCount.classList.toggle('warn', len > 900);
+  submitBtn.disabled = input.value.trim().length < 2;
+});
+
+// Submit
+submitBtn.addEventListener('click', async () => {
+  const text = input.value.trim();
+  if (text.length < 2) return;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
+  document.getElementById('form-err').style.display = 'none';
+  try {
+    await addDoc(collection(db, 'sessions', sessionId, 'responses'), {
+      questionIdx,
+      text,
+      timestamp: serverTimestamp()
+    });
+    showPane('success-pane');
+  } catch(e) {
+    document.getElementById('form-err').textContent = 'Submission failed. Please try again.';
+    document.getElementById('form-err').style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit response';
+  }
+});
+</script>
+</body>
+</html>
