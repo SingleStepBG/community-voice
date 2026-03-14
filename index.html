@@ -3,11 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Community Voice</title>
+<title>Community Voice — SSF</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300;1,9..144,500&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap">
+<!-- Firebase Realtime Database (compat SDK — no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<!-- QR code generator -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <style>
+/* ==================== RESET & BASE ==================== */
 *{box-sizing:border-box;margin:0;padding:0}
 html{height:100%;font-size:15px}
 body{font-family:'DM Sans',sans-serif;background:#080C18;color:#E4EDFF;height:100%;overflow:hidden}
@@ -17,7 +23,8 @@ body{font-family:'DM Sans',sans-serif;background:#080C18;color:#E4EDFF;height:10
   --gold:#E8A83E;--gold-b:#F5BE64;--gold-d:#4A3310;--gold-dd:#2A1E08;
   --teal:#2ECFC0;--teal-d:#0D3530;
   --text:#E4EDFF;--ts:#7A90C0;--tm:#3A4E72;
-  --ok:#4ADE80;--ok-d:#0C2E18;--err:#F87171;--err-d:#2E0C0C;
+  --ok:#4ADE80;--ok-d:#0C2E18;
+  --err:#F87171;--err-d:#2E0C0C;
 }
 button{cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
 input,textarea,select{font-family:'DM Sans',sans-serif;transition:border-color .2s;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:8px}
@@ -30,14 +37,15 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes scaleIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .fade-up{animation:fadeUp .3s ease forwards}
 .fade-in{animation:fadeIn .25s ease forwards}
+.scale-in{animation:scaleIn .25s ease forwards}
 
+/* ==================== SCREENS ==================== */
 .screen{display:none;height:100vh;overflow:hidden}
 .screen.active{display:flex}
 
-/* ===== HOME ===== */
+/* ==================== HOME ==================== */
 #home-screen{flex-direction:column;overflow-y:auto;height:100vh}
 #home-header{padding:40px 48px 32px;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-shrink:0}
 #home-logo{font-family:'Fraunces',serif;font-size:30px;font-weight:500;color:var(--gold);letter-spacing:-.03em}
@@ -52,7 +60,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 #projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .proj-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:22px 24px;cursor:pointer;position:relative;transition:border-color .2s,background .2s}
 .proj-card:hover{background:var(--s2);border-color:var(--border2)}
-.proj-card-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.08em;margin-bottom:10px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.proj-card-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.08em;margin-bottom:10px;display:flex;gap:14px;align-items:center}
 .proj-card-name{font-family:'Fraunces',serif;font-size:18px;font-weight:500;color:var(--text);margin-bottom:6px;line-height:1.3}
 .proj-card-info{font-size:12px;color:var(--ts);margin-bottom:16px;line-height:1.5}
 .proj-card-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:14px}
@@ -67,7 +75,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 .tag.done{background:var(--ok-d);color:var(--ok)}
 .tag.active-tag{background:var(--gold-dd);color:var(--gold)}
 
-/* ===== SETUP ===== */
+/* ==================== SETUP ==================== */
 #setup-screen{flex-direction:column;overflow-y:auto;height:100vh}
 #setup-header{padding:22px 40px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-shrink:0}
 .back-btn{background:transparent;border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;color:var(--ts);display:flex;align-items:center;gap:6px}
@@ -85,16 +93,28 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 .q-item{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;transition:border-color .15s}
 .q-item:focus-within{border-color:var(--border2)}
 .q-item-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--tm);margin-top:3px;flex-shrink:0;min-width:22px}
-.q-item-input{flex:1;background:transparent;border:none;resize:none;color:var(--text);font-size:14px;line-height:1.5;min-height:36px}
+.q-item-body{flex:1;display:flex;flex-direction:column;gap:0}
+.q-item-input{width:100%;background:transparent;border:none;resize:none;color:var(--text);font-size:14px;line-height:1.5;min-height:36px}
 .q-item-input:focus{outline:none}
 .q-item-input::placeholder{color:var(--tm)}
+.q-item-count-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.q-item-count-label{font-size:10px;color:var(--tm);flex:1;font-family:'DM Mono',monospace;letter-spacing:.04em}
+.q-count-stepper{display:flex;align-items:center}
+.q-count-btn{background:var(--s3);border:1px solid var(--border);color:var(--ts);width:22px;height:22px;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'DM Mono',monospace;padding:0}
+.q-count-btn:hover{color:var(--text);border-color:var(--border2)}
+.q-count-btn:first-child{border-radius:5px 0 0 5px}
+.q-count-btn:last-child{border-radius:0 5px 5px 0;border-left:none}
+.q-count-val{background:var(--s2);border:1px solid var(--border);border-left:none;border-right:none;color:var(--gold);font-family:'DM Mono',monospace;font-size:12px;width:28px;height:22px;text-align:center;line-height:22px;display:block;user-select:none}
+.q-count-badge{display:none;background:var(--gold-dd);color:var(--gold);font-size:10px;font-family:'DM Mono',monospace;border-radius:100px;padding:2px 8px;letter-spacing:.04em;margin-left:4px}
+.q-count-badge.show{display:inline-block}
 .q-item-actions{display:flex;gap:4px;flex-shrink:0;margin-top:1px}
 .q-item-btn{background:transparent;border:none;color:var(--tm);padding:4px 6px;border-radius:5px;font-size:12px}
 .q-item-btn:hover{color:var(--ts);background:var(--s3)}
 .q-item-btn.danger:hover{color:var(--err)}
 #btn-add-q{background:transparent;border:1px dashed var(--border2);border-radius:10px;padding:11px;color:var(--ts);font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:4px}
 #btn-add-q:hover{border-color:var(--gold);color:var(--gold)}
-.setup-footer-inner{padding:18px 40px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-shrink:0}
+#setup-footer-bar{flex-shrink:0}
+#setup-footer-inner{padding:18px 40px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center}
 #btn-save-start{background:var(--gold);border:none;border-radius:10px;padding:12px 28px;color:#080C18;font-weight:600;font-size:14px}
 #btn-save-start:hover{background:var(--gold-b)}
 #btn-save-start:disabled{background:var(--s3);color:var(--tm);cursor:not-allowed}
@@ -103,21 +123,29 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 .api-note-label{font-size:11px;color:var(--tm);margin-bottom:6px;font-family:'DM Mono',monospace;letter-spacing:.06em}
 .api-note-text{font-size:12px;color:var(--ts);line-height:1.6}
 
-/* ===== SESSION ===== */
+/* ==================== SESSION ==================== */
 #session-screen{flex-direction:row}
 #sidebar{width:258px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 #sb-header{padding:18px 20px 14px;border-bottom:1px solid var(--border)}
 #sb-project-name{font-family:'Fraunces',serif;font-size:16px;font-weight:500;color:var(--text);line-height:1.3;margin-bottom:4px}
 #sb-project-meta{font-size:11px;color:var(--tm)}
+/* Room info bar */
+#room-info-bar{display:none;padding:10px 16px;background:var(--gold-dd);border-bottom:1px solid var(--gold-d)}
+#room-info-bar.visible{display:block}
+#room-code-display{font-family:'DM Mono',monospace;font-size:20px;color:var(--gold);font-weight:500;letter-spacing:.2em;margin-bottom:2px}
+#room-live-total{font-size:11px;color:var(--ts);margin-bottom:8px;min-height:16px}
+#btn-share-room{width:100%;background:var(--s3);border:1px solid var(--gold-d);border-radius:8px;padding:7px;font-size:11px;color:var(--gold);text-align:center;font-weight:500}
+#btn-share-room:hover{border-color:var(--gold)}
 #q-list{flex:1;overflow-y:auto;padding:8px 0}
 .q-btn{width:100%;text-align:left;background:transparent;border:none;border-left:3px solid transparent;padding:9px 14px 9px 13px;display:flex;align-items:flex-start;gap:8px;transition:all .15s}
 .q-btn:hover{background:var(--s2)}
 .q-btn.active{background:var(--s3);border-left-color:var(--gold)}
 .q-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);flex-shrink:0;margin-top:2px;letter-spacing:.05em}
 .q-btn.active .q-num{color:var(--gold)}
-.q-text-sb{font-size:12px;line-height:1.4;color:var(--ts);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.q-text-sb{font-size:12px;line-height:1.4;color:var(--ts);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1}
 .q-btn.active .q-text-sb{color:var(--text)}
 .q-check{margin-left:auto;flex-shrink:0;color:var(--ok);font-size:11px;margin-top:2px}
+.q-live-count{flex-shrink:0;font-family:'DM Mono',monospace;font-size:9px;color:var(--teal);margin-top:3px;opacity:.8}
 #progress-area{padding:12px 18px;border-top:1px solid var(--border)}
 #prog-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:11px}
 #prog-label{color:var(--tm)}
@@ -127,6 +155,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 #sb-footer{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:6px}
 .sb-foot-btn{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:11px;color:var(--ts);text-align:center}
 .sb-foot-btn:hover{color:var(--text);border-color:var(--border2)}
+/* Center panel */
 #center{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 #q-header{padding:22px 26px 18px;border-bottom:1px solid var(--border)}
 #q-label-sess{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
@@ -140,7 +169,10 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 #resp-ta:focus{border-color:var(--gold)}
 #resp-ta::placeholder{color:var(--tm)}
 #error-msg{font-size:12px;color:var(--err);padding:8px 12px;background:var(--err-d);border-radius:8px;border:1px solid #401010;flex-shrink:0}
-#actions{display:flex;gap:8px;flex-shrink:0}
+#actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
+#btn-load-responses{background:var(--teal-d);border:1px solid var(--teal);border-radius:10px;padding:11px 14px;color:var(--teal);font-size:13px;font-weight:500;display:none;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0}
+#btn-load-responses.visible{display:flex}
+#btn-load-responses:hover{opacity:.85}
 #btn-synth{flex:1;border:none;border-radius:10px;padding:11px 18px;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:7px}
 #btn-synth.ready{background:linear-gradient(135deg,var(--gold),var(--gold-b));color:#080C18}
 #btn-synth.ready:hover{opacity:.9;transform:translateY(-1px)}
@@ -155,30 +187,10 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 #btn-redo:hover{color:var(--ts)}
 #btn-redo.visible{display:block}
 #keyboard-hint{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);text-align:right;flex-shrink:0;line-height:1.6}
-
-/* ===== RIGHT PANEL ===== */
-#right-panel{width:300px;flex-shrink:0;background:var(--s1);display:flex;flex-direction:column;overflow:hidden}
-#right-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-#right-head-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.12em;text-transform:uppercase}
-
-/* QR Panel */
-#qr-panel{flex:1;display:flex;flex-direction:column;padding:18px;gap:14px;overflow-y:auto}
-#qr-box{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px}
-#qr-code-wrap{background:#0E1525;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:center}
-#qr-code-wrap canvas,#qr-code-wrap img{display:block}
-#qr-url{font-family:'DM Mono',monospace;font-size:9px;color:var(--tm);text-align:center;word-break:break-all;line-height:1.5;max-width:220px}
-#qr-no-url{font-size:12px;color:var(--tm);text-align:center;line-height:1.6;padding:10px}
-#live-count-card{background:var(--s3);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
-#live-count-num{font-family:'Fraunces',serif;font-size:28px;font-weight:500;color:var(--gold)}
-#live-count-label{font-size:12px;color:var(--ts);line-height:1.4;text-align:right}
-#live-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;animation:pulse 2s infinite;margin-right:6px}
-#btn-import-live{width:100%;background:var(--teal-d);border:1px solid var(--teal);border-radius:10px;padding:11px;color:var(--teal);font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px}
-#btn-import-live:hover{background:var(--teal);color:#080C18}
-#btn-import-live:disabled{background:var(--s3);border-color:var(--border);color:var(--tm);cursor:not-allowed}
-#import-note{font-size:11px;color:var(--tm);text-align:center;line-height:1.5}
-
-/* Synth Panel */
-#synth-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+/* Right synthesis panel */
+#synth-panel{width:330px;flex-shrink:0;background:var(--s1);display:flex;flex-direction:column;overflow:hidden}
+#synth-head{padding:22px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+#synth-head-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.12em;text-transform:uppercase}
 #synth-body{flex:1;overflow-y:auto;padding:14px 18px}
 #synth-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;gap:12px;text-align:center}
 #synth-empty-icon{font-size:28px;color:var(--gold-d)}
@@ -200,7 +212,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 .tc-quotes{display:flex;flex-direction:column;gap:5px}
 .tc-quote{border-left:2px solid var(--gold-d);padding-left:8px;font-size:11px;color:var(--ts);line-height:1.4;font-style:italic}
 
-/* ===== RESULTS ===== */
+/* ==================== RESULTS ==================== */
 #results-screen{flex-direction:column;height:100vh;overflow-y:auto}
 #results-header{padding:22px 40px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-shrink:0}
 #results-title-area{display:flex;align-items:center;gap:16px}
@@ -224,11 +236,11 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 .result-theme-quotes{display:flex;flex-direction:column;gap:4px}
 .result-theme-quote{font-size:11px;color:var(--ts);border-left:2px solid var(--gold-d);padding-left:8px;font-style:italic;line-height:1.4}
 .result-skip{padding:16px 22px;font-size:13px;color:var(--tm);font-style:italic}
+#btn-export-results{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--ts);display:flex;align-items:center;gap:8px}
+#btn-export-results:hover{color:var(--text);border-color:var(--border2)}
 .export-btns{display:flex;gap:8px}
-.export-btn{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--ts);display:flex;align-items:center;gap:8px}
-.export-btn:hover{color:var(--text);border-color:var(--border2)}
 
-/* ===== PROJECTION ===== */
+/* ==================== PROJECTION ==================== */
 #projection{display:none;position:fixed;inset:0;background:var(--bg);flex-direction:column;z-index:9999;overflow-y:auto}
 #projection.active{display:flex}
 #proj-header{padding:30px 44px 22px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-shrink:0}
@@ -241,7 +253,8 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 #proj-insight{font-size:14px;color:var(--ts);font-style:italic;line-height:1.5}
 #proj-grid{padding:28px 44px;display:grid;gap:18px;flex:1}
 #proj-footer{padding:14px 44px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
-#proj-footer-l,#proj-footer-r{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.08em}
+#proj-footer-l{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.08em}
+#proj-footer-r{font-family:'DM Mono',monospace;font-size:10px;color:var(--tm)}
 .tc-big{background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:26px 30px;position:relative;overflow:hidden}
 .tc-big-watermark{position:absolute;right:22px;top:50%;transform:translateY(-50%);font-family:'Fraunces',serif;font-size:80px;font-weight:300;color:var(--gold-d);line-height:1;pointer-events:none;user-select:none;opacity:.5}
 .tc-big-label{font-family:'Fraunces',serif;font-size:21px;font-weight:500;color:var(--gold);margin-bottom:10px;line-height:1.3;max-width:70%}
@@ -251,7 +264,32 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 .tc-big-quotes{display:flex;flex-direction:column;gap:8px}
 .tc-big-quote{border-left:3px solid var(--gold);padding-left:12px;font-family:'Fraunces',serif;font-style:italic;font-size:13px;color:var(--text);line-height:1.5}
 
-/* ===== MODAL ===== */
+/* ==================== PARTICIPANT SCREEN ==================== */
+#participant-screen{flex-direction:column;height:100vh;overflow:hidden}
+#part-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+#part-logo{font-family:'Fraunces',serif;font-size:18px;font-weight:500;color:var(--gold);letter-spacing:-.02em}
+#part-session-name{font-size:11px;color:var(--tm);margin-top:3px;font-family:'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase}
+#part-content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+
+/* ==================== ROOM MODAL ==================== */
+#room-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center}
+#room-modal.active{display:flex}
+#room-modal-box{background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:28px 28px 24px;width:90%;max-width:380px;animation:scaleIn .2s ease}
+#room-modal-title{font-family:'Fraunces',serif;font-size:20px;font-weight:500;color:var(--text);margin-bottom:4px}
+#room-modal-sub{font-size:12px;color:var(--tm);margin-bottom:20px}
+#room-modal-code-display{font-family:'DM Mono',monospace;font-size:34px;color:var(--gold);letter-spacing:.28em;text-align:center;margin-bottom:16px;background:var(--gold-dd);border-radius:12px;padding:14px;border:1px solid var(--gold-d)}
+#room-modal-qr{display:flex;justify-content:center;margin-bottom:16px;background:white;border-radius:12px;padding:12px}
+#room-modal-qr canvas,#room-modal-qr img{border-radius:4px}
+#room-modal-url{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-family:'DM Mono',monospace;font-size:10px;color:var(--ts);margin-bottom:14px;word-break:break-all;line-height:1.6}
+#room-modal-count{font-size:11px;color:var(--teal);font-family:'DM Mono',monospace;text-align:center;margin-bottom:14px;min-height:16px}
+#room-modal-actions{display:flex;gap:10px}
+.rm-btn{flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:500;border:none;cursor:pointer;font-family:'DM Sans',sans-serif}
+.rm-btn.primary{background:var(--gold);color:#080C18}
+.rm-btn.primary:hover{background:var(--gold-b)}
+.rm-btn.secondary{background:var(--s3);border:1px solid var(--border);color:var(--ts)}
+.rm-btn.secondary:hover{color:var(--text)}
+
+/* ==================== MODAL & TOAST ==================== */
 #modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;align-items:center;justify-content:center}
 #modal-overlay.active{display:flex}
 #modal-box{background:var(--s1);border:1px solid var(--border2);border-radius:16px;padding:28px 32px;width:90%;max-width:420px;animation:scaleIn .2s ease}
@@ -264,9 +302,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 .modal-btn.danger:hover{background:var(--err-d)}
 .modal-btn.primary{background:var(--gold);border-color:var(--gold);color:#080C18;font-weight:600}
 .modal-btn.primary:hover{background:var(--gold-b)}
-
-/* ===== TOAST ===== */
-#toast{position:fixed;bottom:24px;right:24px;z-index:9998;background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--text);display:none;align-items:center;gap:10px;animation:fadeUp .3s ease}
+#toast{position:fixed;bottom:24px;right:24px;z-index:9998;background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--text);display:none;align-items:center;gap:10px;animation:fadeUp .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.5)}
 #toast.active{display:flex}
 #toast.success .toast-icon{color:var(--ok)}
 #toast.err .toast-icon{color:var(--err)}
@@ -275,7 +311,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 </head>
 <body>
 
-<!-- HOME -->
+<!-- ====== HOME SCREEN ====== -->
 <div id="home-screen" class="screen active">
   <div id="home-header">
     <div>
@@ -288,13 +324,13 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
     <div id="home-empty" style="display:none">
       <div id="home-empty-mark">✦</div>
       <div id="home-empty-head">No sessions yet</div>
-      <div id="home-empty-sub">Create your first session to get started.</div>
+      <div id="home-empty-sub">Create your first session to get started. Each session is a community meeting with a set of questions for synthesis.</div>
     </div>
     <div id="projects-grid"></div>
   </div>
 </div>
 
-<!-- SETUP -->
+<!-- ====== SETUP SCREEN ====== -->
 <div id="setup-screen" class="screen">
   <div id="setup-header">
     <button class="back-btn" id="btn-setup-back">← Back</button>
@@ -311,7 +347,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
       </div>
       <div class="form-row">
         <div class="form-field">
-          <div class="field-label">Organisation</div>
+          <div class="field-label">Organisation / Project</div>
           <input type="text" id="setup-org" class="field-input" placeholder="e.g. SSF × Действие">
         </div>
         <div class="form-field">
@@ -325,7 +361,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
       </div>
     </div>
     <div class="form-section">
-      <div class="form-section-label">Projection footer</div>
+      <div class="form-section-label">Confidentiality Footer (shown in projection)</div>
       <input type="text" id="setup-footer" class="field-input" placeholder="Confidential · For participants only" value="Confidential · For participants only">
     </div>
     <div class="form-section">
@@ -334,22 +370,30 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
       <button id="btn-add-q">+ Add question</button>
     </div>
     <div class="api-note">
-      <div class="api-note-label">How it works</div>
-      <div class="api-note-text">When you start a session, each question gets a QR code. Participants scan with their phones and submit responses anonymously — no app needed. Responses appear live on your screen. When ready, click "Import & Synthesise" to analyse them.</div>
+      <div class="api-note-label">About live collection</div>
+      <div class="api-note-text">Each session gets a unique room code. Participants open the room URL on their own devices and answer question by question. Their responses arrive in real time. Set "Answers per person" on any question to collect multiple responses per participant (e.g. "3 challenges" → 3 sequential inputs).</div>
     </div>
   </div>
-  <div class="setup-footer-inner">
-    <button id="btn-save-start" disabled>Start Session →</button>
-    <div id="setup-msg">Add at least 1 question to begin</div>
+  <div id="setup-footer-bar">
+    <div id="setup-footer-inner">
+      <button id="btn-save-start" disabled>Start Session →</button>
+      <div id="setup-msg">Add at least 1 question to begin</div>
+    </div>
   </div>
 </div>
 
-<!-- SESSION -->
+<!-- ====== SESSION SCREEN ====== -->
 <div id="session-screen" class="screen">
+  <!-- Sidebar -->
   <div id="sidebar">
     <div id="sb-header">
       <div id="sb-project-name"></div>
       <div id="sb-project-meta"></div>
+    </div>
+    <div id="room-info-bar">
+      <div id="room-code-display"></div>
+      <div id="room-live-total">Waiting for responses…</div>
+      <button id="btn-share-room">⛶ Share room link</button>
     </div>
     <div id="q-list"></div>
     <div id="progress-area">
@@ -364,7 +408,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
       <button class="sb-foot-btn" id="btn-close-session">← Exit</button>
     </div>
   </div>
-
+  <!-- Center -->
   <div id="center">
     <div id="q-header">
       <div id="q-label-sess">Question 1</div>
@@ -375,9 +419,10 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
         <span id="resp-label">Responses — one per line</span>
         <span id="resp-count">0 responses</span>
       </div>
-      <textarea id="resp-ta" placeholder="Paste responses here, one per line.&#10;&#10;Or use the QR code on the right — participant responses will appear there and can be imported automatically."></textarea>
+      <textarea id="resp-ta" placeholder="Paste responses here, one per line.&#10;&#10;Or use the room link to collect live from participants' devices.&#10;&#10;Minimum 2 responses to synthesise."></textarea>
       <div id="error-msg" style="display:none"></div>
       <div id="actions">
+        <button id="btn-load-responses">⬇ Load</button>
         <button id="btn-synth" class="disabled">✦ Synthesise</button>
         <button id="btn-redo">↺</button>
         <button id="btn-project">⛶ Project</button>
@@ -386,49 +431,30 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
       <div id="keyboard-hint">⌘ Enter to synthesise · Alt ← → to navigate</div>
     </div>
   </div>
-
-  <div id="right-panel">
-    <div id="right-head">
-      <div id="right-head-label">Participants</div>
+  <!-- Synth panel -->
+  <div id="synth-panel">
+    <div id="synth-head">
+      <div id="synth-head-label">Synthesis</div>
     </div>
-    <!-- QR Panel (shown pre-synthesis) -->
-    <div id="qr-panel">
-      <div id="qr-box">
-        <div id="qr-code-wrap">
-          <div id="qr-code"></div>
-        </div>
-        <div id="qr-url"></div>
-        <div id="qr-no-url" style="display:none">Deploy to GitHub Pages to enable QR codes.<br><br>You can still paste responses manually.</div>
+    <div id="synth-body">
+      <div id="synth-empty">
+        <div id="synth-empty-icon">✦</div>
+        <div id="synth-empty-text">Paste responses and<br>click Synthesise</div>
       </div>
-      <div id="live-count-card">
-        <div id="live-count-num">0</div>
-        <div id="live-count-label"><span id="live-dot"></span>live responses<br>for this question</div>
+      <div id="synth-loading">
+        <div id="synth-spinner"></div>
+        <div id="synth-loading-text">Analysing responses…</div>
       </div>
-      <button id="btn-import-live" disabled>↓ Import responses (0)</button>
-      <div id="import-note">Or paste responses manually in the text area</div>
-    </div>
-    <!-- Synth Panel (shown post-synthesis) -->
-    <div id="synth-panel" style="display:none">
-      <div id="synth-body">
-        <div id="synth-empty">
-          <div id="synth-empty-icon">✦</div>
-          <div id="synth-empty-text">Paste responses and<br>click Synthesise</div>
-        </div>
-        <div id="synth-loading">
-          <div id="synth-spinner"></div>
-          <div id="synth-loading-text">Analysing responses…</div>
-        </div>
-        <div id="mood-card">
-          <div id="mood-badge"></div>
-          <div id="key-insight"></div>
-        </div>
-        <div id="themes-list"></div>
+      <div id="mood-card">
+        <div id="mood-badge"></div>
+        <div id="key-insight"></div>
       </div>
+      <div id="themes-list"></div>
     </div>
   </div>
 </div>
 
-<!-- RESULTS -->
+<!-- ====== RESULTS SCREEN ====== -->
 <div id="results-screen" class="screen">
   <div id="results-header">
     <div id="results-title-area">
@@ -436,14 +462,14 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
       <div id="results-title">Session Results</div>
     </div>
     <div class="export-btns">
-      <button class="export-btn" id="btn-export-json">↓ JSON</button>
-      <button class="export-btn" id="btn-export-text">↓ Text</button>
+      <button id="btn-export-results">↓ Export JSON</button>
+      <button id="btn-export-text" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--ts);display:flex;align-items:center;gap:8px;">↓ Export Text</button>
     </div>
   </div>
   <div id="results-body"></div>
 </div>
 
-<!-- PROJECTION -->
+<!-- ====== PROJECTION VIEW ====== -->
 <div id="projection">
   <div id="proj-header">
     <div>
@@ -463,7 +489,32 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
   </div>
 </div>
 
-<!-- MODAL -->
+<!-- ====== PARTICIPANT SCREEN ====== -->
+<div id="participant-screen" class="screen">
+  <div id="part-header" style="display:none">
+    <div id="part-logo">✦ Community Voice</div>
+    <div id="part-session-name"></div>
+  </div>
+  <div id="part-content"></div>
+</div>
+
+<!-- ====== ROOM MODAL ====== -->
+<div id="room-modal">
+  <div id="room-modal-box">
+    <div id="room-modal-title">Share room</div>
+    <div id="room-modal-sub">Participants open this link on their phone to submit responses live.</div>
+    <div id="room-modal-code-display"></div>
+    <div id="room-modal-qr"></div>
+    <div id="room-modal-url"></div>
+    <div id="room-modal-count"></div>
+    <div id="room-modal-actions">
+      <button class="rm-btn primary" id="btn-copy-room-url">Copy link</button>
+      <button class="rm-btn secondary" id="btn-close-room-modal">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== MODAL ====== -->
 <div id="modal-overlay">
   <div id="modal-box">
     <div id="modal-title"></div>
@@ -472,38 +523,79 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
   </div>
 </div>
 
-<!-- TOAST -->
-<div id="toast"><span class="toast-icon"></span><span id="toast-msg"></span></div>
+<!-- ====== TOAST ====== -->
+<div id="toast">
+  <span class="toast-icon"></span>
+  <span id="toast-msg"></span>
+</div>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, onSnapshot, query, where, serverTimestamp, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js';
-
-// ===== FIREBASE INIT =====
-const firebaseConfig = {
-  apiKey: "AIzaSyAW1A6djClIP8NZf5vHXlapJJ_6AI9AJKE",
-  authDomain: "community-voice-177112828.firebaseapp.com",
-  projectId: "community-voice-177112828",
-  storageBucket: "community-voice-177112828.firebasestorage.app",
+<script>
+// ==================== FIREBASE CONFIG ====================
+// STEP 1: Replace these placeholder values with your Firebase project config.
+// Go to: Firebase Console → Your Project → Project Settings → "Your apps" → Config
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyAW1A6djClIP8NZf5vHXlapJJ_6AI9AJKE",
+  authDomain:        "community-voice-177112828.firebaseapp.com",
+  databaseURL:       "https://community-voice-177112828-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "community-voice-177112828",
+  storageBucket:     "community-voice-177112828.firebasestorage.app",
   messagingSenderId: "277351730334",
-  appId: "1:277351730334:web:cc1e95818fb7b28c563f8f"
+  appId:             "1:277351730334:web:cc1e95818fb7b28c563f8f"
 };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// STEP 2: In Firebase Console → Realtime Database → Rules, set:
+// { "rules": { ".read": true, ".write": true } }
+// (Fine for a closed-session, short-duration use. Tighten after the event if needed.)
+//
+// STEP 3: Deploy this file as index.html on GitHub Pages. The room URL will be:
+// https://YOUR_USERNAME.github.io/YOUR_REPO/?room=ROOMCODE
 
-// ===== STATE =====
-const STORAGE_KEY = 'cv_projects_v3';
+// ==================== FIREBASE INIT ====================
+let db = null;
+function initFirebase() {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    return true;
+  } catch(e) {
+    console.warn('Firebase init failed:', e.message);
+    return false;
+  }
+}
+function isFirebaseReady() { return db !== null && FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY'; }
+
+// ==================== MODE DETECTION ====================
+const _urlParams = new URLSearchParams(window.location.search);
+const ROOM_PARAM = (_urlParams.get('room') || '').toUpperCase().trim();
+const IS_PARTICIPANT = !!ROOM_PARAM;
+
+// ==================== ROOM CODE GENERATION ====================
+function generateRoomCode() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no confusing chars (0,O,I,1,L)
+  let c = '';
+  for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+  return c;
+}
+function getRoomUrl(code) {
+  return window.location.href.split('?')[0] + '?room=' + code;
+}
+function getParticipantId() {
+  let pid = sessionStorage.getItem('cv_pid');
+  if (!pid) { pid = Math.random().toString(36).substr(2, 12); sessionStorage.setItem('cv_pid', pid); }
+  return pid;
+}
+
+// ==================== STATE ====================
 let projects = [];
 let currentProject = null;
 let activeQuestionIdx = 0;
 let responsesMap = {};
 let synthesisMap = {};
 let isLoading = false;
-let liveResponses = [];
-let firestoreUnsubscribe = null;
-let currentQrCode = null;
+let roomListeners = [];
+let liveCountsMap = {};
 
-// ===== STORAGE =====
+const STORAGE_KEY = 'community_voice_projects_v2';
+
 function loadFromStorage() {
   try { const r = localStorage.getItem(STORAGE_KEY); if (r) projects = JSON.parse(r); } catch(e) { projects = []; }
 }
@@ -511,504 +603,1040 @@ function saveToStorage() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch(e) {}
 }
 
-// ===== SCREEN =====
+// ==================== SCREEN MANAGEMENT ====================
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 
-// ===== UTILS =====
-function escHtml(str) {
-  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function countLines(text) {
-  return text.split('\n').filter(l => l.trim()).length;
-}
-function generateId() {
-  return Math.random().toString(36).substring(2, 9);
-}
-function getBaseURL() {
-  if (window.location.protocol === 'file:') return null;
-  return window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
-}
-
-// ===== HOME =====
+// ==================== HOME SCREEN ====================
 function renderHome() {
   loadFromStorage();
   const grid = document.getElementById('projects-grid');
   const empty = document.getElementById('home-empty');
-  if (!projects.length) { empty.style.display='flex'; grid.innerHTML=''; return; }
-  empty.style.display='none'; grid.innerHTML='';
+  if (!projects.length) { empty.style.display = 'flex'; grid.innerHTML = ''; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = '';
   projects.slice().reverse().forEach((p, ri) => {
     const i = projects.length - 1 - ri;
-    const done = Object.keys(p.synthesis||{}).length;
+    const done = Object.keys(p.synthesis || {}).length;
     const total = p.questions.length;
     const allDone = done === total && total > 0;
     const card = document.createElement('div');
     card.className = 'proj-card fade-up';
-    card.style.animationDelay = `${ri*40}ms`;
+    card.style.animationDelay = `${ri * 40}ms`;
     card.innerHTML = `
       <div class="proj-card-actions">
-        <button class="proj-action-btn" id="edit-${i}">Edit</button>
-        <button class="proj-action-btn danger" id="del-${i}">Delete</button>
+        <button class="proj-action-btn" onclick="editProject(${i},event)">Edit</button>
+        <button class="proj-action-btn danger" onclick="deleteProject(${i},event)">Delete</button>
       </div>
       <div class="proj-card-meta">
-        <span>${p.date||'No date'}</span>${p.location?`<span>${p.location}</span>`:''}
-        <span class="tag ${allDone?'done':done>0?'active-tag':''}">${allDone?'Complete':done>0?'In progress':'Not started'}</span>
+        <span>${p.date || 'No date'}</span>
+        ${p.location ? `<span>${p.location}</span>` : ''}
+        ${p.roomCode ? `<span style="color:var(--gold);font-family:'DM Mono',monospace">⛶ ${p.roomCode}</span>` : ''}
+        <span class="tag ${allDone ? 'done' : done > 0 ? 'active-tag' : ''}">${allDone ? 'Complete' : done > 0 ? 'In progress' : 'Not started'}</span>
       </div>
       <div class="proj-card-name">${escHtml(p.name)}</div>
-      <div class="proj-card-info">${p.org?escHtml(p.org):''}</div>
+      <div class="proj-card-info">${p.org ? escHtml(p.org) : ''}</div>
       <div class="proj-card-footer">
-        <span class="proj-card-qs">${total} question${total!==1?'s':''}</span>
+        <span class="proj-card-qs">${total} question${total !== 1 ? 's' : ''}</span>
         <span class="proj-card-progress">${done}/${total} synthesised</span>
-      </div>`;
+      </div>
+    `;
     card.addEventListener('click', () => openSession(i));
-    card.querySelector(`#edit-${i}`).addEventListener('click', e => { e.stopPropagation(); openSetup(i); });
-    card.querySelector(`#del-${i}`).addEventListener('click', e => { e.stopPropagation(); deleteProject(i); });
     grid.appendChild(card);
   });
 }
 
-function deleteProject(i) {
-  showModal('Delete session?', `"${escHtml(projects[i].name)}" will be permanently deleted.`, [
-    {label:'Cancel',cls:'modal-btn'},
-    {label:'Delete',cls:'modal-btn danger',action:()=>{ projects.splice(i,1); saveToStorage(); renderHome(); showToast('Session deleted','err'); }}
-  ]);
-}
-
 document.getElementById('btn-new-project').addEventListener('click', () => openSetup(null));
 
-// ===== SETUP =====
+// ==================== SETUP SCREEN ====================
 let setupProjectIndex = null;
 let setupQuestions = [];
 
 function openSetup(projectIndex) {
   setupProjectIndex = projectIndex;
+  setupQuestions = [];
   if (projectIndex !== null) {
     const p = projects[projectIndex];
     document.getElementById('setup-title').textContent = 'Edit Session';
     document.getElementById('setup-name').value = p.name;
-    document.getElementById('setup-org').value = p.org||'';
-    document.getElementById('setup-date').value = p.date||'';
-    document.getElementById('setup-location').value = p.location||'';
-    document.getElementById('setup-footer').value = p.projFooter||'Confidential · For participants only';
+    document.getElementById('setup-org').value = p.org || '';
+    document.getElementById('setup-date').value = p.date || '';
+    document.getElementById('setup-location').value = p.location || '';
+    document.getElementById('setup-footer').value = p.projFooter || 'Confidential · For participants only';
     document.getElementById('btn-save-start').textContent = 'Save Changes';
-    setupQuestions = p.questions.map(q=>({...q}));
+    setupQuestions = p.questions.map(q => ({...q, count: q.count || 1}));
   } else {
     document.getElementById('setup-title').textContent = 'New Session';
-    ['setup-name','setup-org','setup-date','setup-location'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('setup-footer').value='Confidential · For participants only';
+    document.getElementById('setup-name').value = '';
+    document.getElementById('setup-org').value = '';
+    document.getElementById('setup-date').value = '';
+    document.getElementById('setup-location').value = '';
+    document.getElementById('setup-footer').value = 'Confidential · For participants only';
     document.getElementById('btn-save-start').textContent = 'Start Session →';
-    setupQuestions = [];
   }
   renderSetupQuestions();
   validateSetup();
   showScreen('setup-screen');
 }
 
+function editProject(i, e) { e.stopPropagation(); openSetup(i); }
+
+function deleteProject(i, e) {
+  e.stopPropagation();
+  showModal('Delete session?', `"${escHtml(projects[i].name)}" and all its synthesis data will be permanently deleted.`,
+    [{label:'Cancel',cls:'modal-btn'},{label:'Delete',cls:'modal-btn danger',action:()=>{
+      projects.splice(i, 1); saveToStorage(); renderHome(); showToast('Session deleted', 'err');
+    }}]);
+}
+
 function renderSetupQuestions() {
   const list = document.getElementById('questions-list');
   list.innerHTML = '';
   setupQuestions.forEach((q, i) => {
+    const count = q.count || 1;
     const item = document.createElement('div');
     item.className = 'q-item';
     item.innerHTML = `
       <span class="q-item-num">${String(i+1).padStart(2,'0')}</span>
-      <textarea class="q-item-input" rows="2" placeholder="Type your question…">${escHtml(q.text)}</textarea>
+      <div class="q-item-body">
+        <textarea class="q-item-input" rows="2" placeholder="Type your question…">${escHtml(q.text)}</textarea>
+        <div class="q-item-count-row">
+          <span class="q-item-count-label">Answers per person</span>
+          <div class="q-count-stepper">
+            <button type="button" class="q-count-btn" onclick="adjustCount(${i},-1)">−</button>
+            <span class="q-count-val" id="qcv-${i}">${count}</span>
+            <button type="button" class="q-count-btn" onclick="adjustCount(${i},1)">+</button>
+          </div>
+          <span class="q-count-badge${count > 1 ? ' show' : ''}" id="qcb-${i}">×${count} per person</span>
+        </div>
+      </div>
       <div class="q-item-actions">
-        ${i>0?`<button class="q-item-btn" data-move="${i}" data-dir="-1">↑</button>`:'<span style="width:27px"></span>'}
-        ${i<setupQuestions.length-1?`<button class="q-item-btn" data-move="${i}" data-dir="1">↓</button>`:'<span style="width:27px"></span>'}
-        <button class="q-item-btn danger" data-remove="${i}">✕</button>
-      </div>`;
+        ${i > 0 ? `<button class="q-item-btn" onclick="moveQ(${i},-1)" title="Move up">↑</button>` : '<span style="width:27px"></span>'}
+        ${i < setupQuestions.length-1 ? `<button class="q-item-btn" onclick="moveQ(${i},1)" title="Move down">↓</button>` : '<span style="width:27px"></span>'}
+        <button class="q-item-btn danger" onclick="removeQ(${i})" title="Remove">✕</button>
+      </div>
+    `;
     const ta = item.querySelector('textarea');
-    ta.addEventListener('input', ()=>{ setupQuestions[i].text=ta.value; validateSetup(); });
-    item.querySelector('[data-remove]')?.addEventListener('click',()=>{ setupQuestions.splice(i,1); renderSetupQuestions(); });
-    item.querySelector('[data-move][data-dir="-1"]')?.addEventListener('click',()=>{ [setupQuestions[i-1],setupQuestions[i]]=[setupQuestions[i],setupQuestions[i-1]]; renderSetupQuestions(); });
-    item.querySelector('[data-move][data-dir="1"]')?.addEventListener('click',()=>{ [setupQuestions[i],setupQuestions[i+1]]=[setupQuestions[i+1],setupQuestions[i]]; renderSetupQuestions(); });
+    ta.addEventListener('input', () => { setupQuestions[i].text = ta.value; validateSetup(); });
     list.appendChild(item);
   });
   validateSetup();
 }
 
-function validateSetup() {
-  const name = document.getElementById('setup-name').value.trim();
-  const validQs = setupQuestions.filter(q=>q.text.trim());
-  const ok = name.length>0 && validQs.length>0;
-  document.getElementById('btn-save-start').disabled = !ok;
-  document.getElementById('setup-msg').textContent = !name.length ? 'Session name is required' : !validQs.length ? 'Add at least 1 question' : `${validQs.length} question${validQs.length>1?'s':''} ready`;
+function adjustCount(i, delta) {
+  const current = setupQuestions[i].count || 1;
+  const next = Math.max(1, Math.min(10, current + delta));
+  setupQuestions[i].count = next;
+  const valEl = document.getElementById(`qcv-${i}`);
+  const badgeEl = document.getElementById(`qcb-${i}`);
+  if (valEl) valEl.textContent = next;
+  if (badgeEl) { badgeEl.textContent = `×${next} per person`; badgeEl.classList.toggle('show', next > 1); }
 }
 
-document.getElementById('setup-name').addEventListener('input', validateSetup);
-document.getElementById('btn-add-q').addEventListener('click', () => {
-  setupQuestions.push({text:'', id:Date.now().toString()});
+function moveQ(i, dir) {
+  const t = i + dir;
+  if (t < 0 || t >= setupQuestions.length) return;
+  [setupQuestions[i], setupQuestions[t]] = [setupQuestions[t], setupQuestions[i]];
   renderSetupQuestions();
-  setTimeout(() => { const inputs=document.querySelectorAll('.q-item-input'); if(inputs.length) inputs[inputs.length-1].focus(); }, 50);
+}
+function removeQ(i) { setupQuestions.splice(i, 1); renderSetupQuestions(); }
+
+document.getElementById('btn-add-q').addEventListener('click', () => {
+  setupQuestions.push({text:'', count:1, id: Date.now().toString()});
+  renderSetupQuestions();
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('.q-item-input');
+    if (inputs.length) inputs[inputs.length-1].focus();
+  }, 50);
 });
 
-document.getElementById('btn-save-start').addEventListener('click', () => {
+function validateSetup() {
   const name = document.getElementById('setup-name').value.trim();
-  const org = document.getElementById('setup-org').value.trim();
-  const date = document.getElementById('setup-date').value.trim();
+  const validQs = setupQuestions.filter(q => q.text.trim());
+  const ok = name.length > 0 && validQs.length > 0;
+  const btn = document.getElementById('btn-save-start');
+  const msg = document.getElementById('setup-msg');
+  btn.disabled = !ok;
+  if (!name.length) msg.textContent = 'Session name is required';
+  else if (!validQs.length) msg.textContent = 'Add at least 1 question';
+  else msg.textContent = `${validQs.length} question${validQs.length>1?'s':''} ready`;
+}
+document.getElementById('setup-name').addEventListener('input', validateSetup);
+
+document.getElementById('btn-save-start').addEventListener('click', () => {
+  const name     = document.getElementById('setup-name').value.trim();
+  const org      = document.getElementById('setup-org').value.trim();
+  const date     = document.getElementById('setup-date').value.trim();
   const location = document.getElementById('setup-location').value.trim();
   const projFooter = document.getElementById('setup-footer').value.trim();
-  const questions = setupQuestions.filter(q=>q.text.trim()).map(q=>({...q,text:q.text.trim()}));
+  const questions = setupQuestions.filter(q => q.text.trim()).map(q => ({...q, text:q.text.trim(), count: q.count || 1}));
+
   if (setupProjectIndex !== null) {
-    projects[setupProjectIndex] = {...projects[setupProjectIndex], name, org, date, location, projFooter, questions, updatedAt:Date.now()};
-    saveToStorage(); renderHome(); showScreen('home-screen'); showToast('Session updated','success');
+    projects[setupProjectIndex] = {
+      ...projects[setupProjectIndex],
+      name, org, date, location, projFooter, questions,
+      updatedAt: Date.now()
+    };
+    // Update Firebase session if it has a room code
+    if (projects[setupProjectIndex].roomCode) writeFirebaseSession(projects[setupProjectIndex]);
+    saveToStorage(); renderHome(); showScreen('home-screen'); showToast('Session updated', 'success');
   } else {
-    const project = {id:generateId(), name, org, date, location, projFooter, questions, responses:{}, synthesis:{}, createdAt:Date.now()};
-    projects.push(project); saveToStorage(); openSession(projects.length-1);
+    const roomCode = generateRoomCode();
+    const project = {
+      id: Date.now().toString(),
+      name, org, date, location, projFooter, questions,
+      responses: {}, synthesis: {},
+      roomCode,
+      createdAt: Date.now()
+    };
+    projects.push(project);
+    saveToStorage();
+    writeFirebaseSession(project); // fire-and-forget
+    openSession(projects.length - 1);
   }
 });
 
 document.getElementById('btn-setup-back').addEventListener('click', () => { showScreen('home-screen'); renderHome(); });
 
-// ===== SESSION =====
+// ==================== FIREBASE SESSION WRITE ====================
+function writeFirebaseSession(project) {
+  if (!isFirebaseReady() || !project.roomCode) return;
+  db.ref(`community_voice/sessions/${project.roomCode}`).set({
+    name: project.name,
+    org:  project.org  || '',
+    date: project.date || '',
+    location: project.location || '',
+    projFooter: project.projFooter || '',
+    questions: project.questions.map(q => ({text: q.text, count: q.count || 1})),
+    createdAt: project.createdAt || Date.now()
+  }).catch(e => console.warn('Firebase session write failed:', e.message));
+}
+
+// ==================== SESSION ====================
 function openSession(projectIndex) {
   currentProject = projects[projectIndex];
   activeQuestionIdx = 0;
   responsesMap = currentProject.responses ? {...currentProject.responses} : {};
   synthesisMap = currentProject.synthesis ? {...currentProject.synthesis} : {};
   isLoading = false;
+  liveCountsMap = {};
+
   document.getElementById('sb-project-name').textContent = currentProject.name;
-  document.getElementById('sb-project-meta').textContent = [currentProject.org,currentProject.date,currentProject.location].filter(Boolean).join(' · ');
-  saveSessionToFirestore(currentProject);
-  buildSidebar(); updateCenter(); showScreen('session-screen');
-  startLiveListener(activeQuestionIdx);
+  document.getElementById('sb-project-meta').textContent =
+    [currentProject.org, currentProject.date, currentProject.location].filter(Boolean).join(' · ');
+
+  // Room info bar
+  if (currentProject.roomCode) {
+    document.getElementById('room-code-display').textContent = currentProject.roomCode;
+    document.getElementById('room-info-bar').classList.add('visible');
+    if (isFirebaseReady()) startRoomListening(currentProject.roomCode);
+  } else {
+    document.getElementById('room-info-bar').classList.remove('visible');
+  }
+
+  buildSidebar();
+  updateCenter();
+  updateSynthPanel(synthesisMap[activeQuestionIdx] || null);
+  updateResponseCount();
+  respTa.value = responsesMap[activeQuestionIdx] || '';
+  showScreen('session-screen');
 }
 
 function saveSessionToProject() {
-  const idx = projects.findIndex(p=>p.id===currentProject.id);
-  if (idx===-1) return;
+  const idx = projects.findIndex(p => p.id === currentProject.id);
+  if (idx === -1) return;
   projects[idx].responses = {...responsesMap};
   projects[idx].synthesis = {...synthesisMap};
   saveToStorage();
 }
 
-async function saveSessionToFirestore(project) {
-  try {
-    await setDoc(doc(db, 'sessions', project.id), {
-      name: project.name,
-      org: project.org||'',
-      date: project.date||'',
-      location: project.location||'',
-      projFooter: project.projFooter||'',
-      questions: project.questions,
-      updatedAt: serverTimestamp()
-    });
-  } catch(e) { console.warn('Firestore save failed:', e); }
+// ==================== FIREBASE ROOM LISTENING ====================
+function startRoomListening(roomCode) {
+  stopRoomListening();
+  currentProject.questions.forEach((q, i) => {
+    const qRef = db.ref(`community_voice/responses/${roomCode}/q${i}`);
+    const handler = snapshot => {
+      const val = snapshot.val();
+      liveCountsMap[i] = val ? Object.keys(val).length : 0;
+      updateLiveCounts();
+    };
+    qRef.on('value', handler);
+    roomListeners.push({ref: qRef, handler});
+  });
 }
 
+function stopRoomListening() {
+  roomListeners.forEach(({ref, handler}) => ref.off('value', handler));
+  roomListeners = [];
+}
+
+function updateLiveCounts() {
+  const total = Object.values(liveCountsMap).reduce((a, b) => a + b, 0);
+  const el = document.getElementById('room-live-total');
+  if (el) el.textContent = total > 0 ? `${total} response${total !== 1 ? 's' : ''} received live` : 'Waiting for responses…';
+  const roomModalCount = document.getElementById('room-modal-count');
+  if (roomModalCount) roomModalCount.textContent = total > 0 ? `${total} response${total !== 1 ? 's' : ''} received so far` : 'No responses yet';
+  buildSidebar();
+  updateLoadBtn();
+}
+
+function updateLoadBtn() {
+  const btn = document.getElementById('btn-load-responses');
+  if (!btn) return;
+  const count = liveCountsMap[activeQuestionIdx] || 0;
+  const hasRoom = currentProject && currentProject.roomCode && isFirebaseReady();
+  btn.classList.toggle('visible', hasRoom && count > 0);
+  if (count > 0) btn.textContent = `⬇ ${count} live`;
+}
+
+async function loadResponsesFromFirebase() {
+  if (!currentProject || !currentProject.roomCode || !isFirebaseReady()) return;
+  const qIdx = activeQuestionIdx;
+  try {
+    const snapshot = await db.ref(`community_voice/responses/${currentProject.roomCode}/q${qIdx}`).once('value');
+    const val = snapshot.val();
+    if (!val) { showToast('No responses yet for this question', 'err'); return; }
+    const lines = [];
+    Object.values(val).forEach(entry => {
+      if (Array.isArray(entry.answers)) entry.answers.forEach(a => { if (a && a.trim()) lines.push(a.trim()); });
+    });
+    if (!lines.length) { showToast('No responses yet', 'err'); return; }
+    respTa.value = lines.join('\n');
+    responsesMap[qIdx] = respTa.value;
+    updateResponseCount();
+    showToast(`${lines.length} response${lines.length !== 1 ? 's' : ''} loaded`, 'success');
+  } catch(e) {
+    showToast('Could not load responses: ' + e.message, 'err');
+  }
+}
+
+// ==================== ROOM MODAL ====================
+let qrInstance = null;
+function showRoomModal() {
+  if (!currentProject || !currentProject.roomCode) return;
+  const code = currentProject.roomCode;
+  const url  = getRoomUrl(code);
+  document.getElementById('room-modal-code-display').textContent = code;
+  document.getElementById('room-modal-url').textContent = url;
+  const totalLive = Object.values(liveCountsMap).reduce((a,b) => a+b, 0);
+  document.getElementById('room-modal-count').textContent = totalLive > 0 ? `${totalLive} response${totalLive !== 1 ? 's' : ''} received so far` : 'No responses yet';
+  const qrEl = document.getElementById('room-modal-qr');
+  qrEl.innerHTML = '';
+  try {
+    new QRCode(qrEl, {text: url, width: 160, height: 160, colorDark:'#080C18', colorLight:'#FFFFFF', correctLevel: QRCode.CorrectLevel.M});
+  } catch(e) { qrEl.textContent = url; }
+  document.getElementById('room-modal').classList.add('active');
+}
+function hideRoomModal() { document.getElementById('room-modal').classList.remove('active'); }
+
+document.getElementById('btn-share-room').addEventListener('click', showRoomModal);
+document.getElementById('btn-close-room-modal').addEventListener('click', hideRoomModal);
+document.getElementById('room-modal').addEventListener('click', e => { if (e.target === e.currentTarget) hideRoomModal(); });
+document.getElementById('btn-copy-room-url').addEventListener('click', () => {
+  const url = getRoomUrl(currentProject.roomCode);
+  navigator.clipboard.writeText(url).then(() => showToast('Link copied', 'success')).catch(() => {
+    prompt('Copy this link:', url);
+  });
+});
+
+// ==================== SIDEBAR & CENTER ====================
 function buildSidebar() {
   const list = document.getElementById('q-list');
   list.innerHTML = '';
   currentProject.questions.forEach((q, i) => {
     const btn = document.createElement('button');
-    btn.className = 'q-btn'+(i===activeQuestionIdx?' active':'');
-    btn.innerHTML = `<span class="q-num">${String(i+1).padStart(2,'0')}</span><span class="q-text-sb">${escHtml(q.text)}</span>${synthesisMap[i]?'<span class="q-check">✓</span>':''}`;
+    btn.className = 'q-btn' + (i === activeQuestionIdx ? ' active' : '');
+    const done = !!synthesisMap[i];
+    const lc = liveCountsMap[i] || 0;
+    const countLabel = q.count && q.count > 1 ? ` ×${q.count}` : '';
+    btn.innerHTML = `
+      <span class="q-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="q-text-sb">${escHtml(q.text)}${countLabel ? `<span style="color:var(--gold);font-size:10px"> ${countLabel}</span>` : ''}</span>
+      ${lc > 0 ? `<span class="q-live-count">${lc}↗</span>` : ''}
+      ${done ? '<span class="q-check">✓</span>' : ''}
+    `;
     btn.onclick = () => switchQuestion(i);
     list.appendChild(btn);
   });
   const total = currentProject.questions.length;
-  const done = Object.keys(synthesisMap).length;
-  document.getElementById('prog-fill').style.width = `${total?(done/total*100):0}%`;
-  document.getElementById('prog-val').textContent = `${done}/${total}`;
+  const done  = Object.keys(synthesisMap).length;
+  progFill.style.width = `${total ? (done/total*100) : 0}%`;
+  progVal.textContent  = `${done}/${total}`;
 }
 
 function switchQuestion(idx) {
   responsesMap[activeQuestionIdx] = respTa.value;
   activeQuestionIdx = idx;
-  respTa.value = responsesMap[activeQuestionIdx]||'';
+  respTa.value = responsesMap[activeQuestionIdx] || '';
   updateResponseCount();
   updateCenter();
+  updateSynthPanel(synthesisMap[activeQuestionIdx] || null);
   buildSidebar();
   showError(null);
-  startLiveListener(idx);
 }
 
 function updateCenter() {
   const q = currentProject.questions[activeQuestionIdx];
-  const total = currentProject.questions.length;
-  document.getElementById('q-label-sess').textContent = `Question ${activeQuestionIdx+1} of ${total}`;
+  document.getElementById('q-label-sess').textContent = `Question ${activeQuestionIdx + 1}`;
   document.getElementById('q-display').textContent = q.text;
   const hasSynth = !!synthesisMap[activeQuestionIdx];
+  const total = currentProject.questions.length;
   btnProject.classList.toggle('visible', hasSynth);
-  btnNext.classList.toggle('visible', hasSynth && activeQuestionIdx<total-1);
+  btnNext.classList.toggle('visible', hasSynth && activeQuestionIdx < total - 1);
   btnRedo.classList.toggle('visible', hasSynth);
-  // Switch right panel
-  document.getElementById('qr-panel').style.display = hasSynth ? 'none' : 'flex';
-  document.getElementById('synth-panel').style.display = hasSynth ? 'flex' : 'none';
-  document.getElementById('right-head-label').textContent = hasSynth ? 'Synthesis' : 'Participants';
-  if (hasSynth) { updateSynthPanel(synthesisMap[activeQuestionIdx]); }
-  updateQrCode(activeQuestionIdx);
   updateSynthButton();
+  updateLoadBtn();
 }
 
-function updateQrCode(questionIdx) {
-  const qrContainer = document.getElementById('qr-code');
-  const qrUrl = document.getElementById('qr-url');
-  const qrNoUrl = document.getElementById('qr-no-url');
-  const qrWrap = document.getElementById('qr-code-wrap');
-  qrContainer.innerHTML = '';
-  if (currentQrCode) { try { currentQrCode.clear(); } catch(e){} currentQrCode = null; }
-  const baseURL = getBaseURL();
-  if (!baseURL) {
-    qrWrap.style.display='none'; qrUrl.style.display='none'; qrNoUrl.style.display='block'; return;
-  }
-  qrWrap.style.display='flex'; qrUrl.style.display='block'; qrNoUrl.style.display='none';
-  const respondURL = `${baseURL}respond.html?s=${currentProject.id}&q=${questionIdx}`;
-  qrUrl.textContent = respondURL;
-  try {
-    currentQrCode = new window.QRCode(qrContainer, {
-      text: respondURL, width: 180, height: 180,
-      colorDark: '#E8A83E', colorLight: '#0E1525',
-      correctLevel: window.QRCode.CorrectLevel.M
-    });
-  } catch(e) { qrUrl.textContent = respondURL; }
-}
-
-// ===== LIVE RESPONSES =====
-function startLiveListener(questionIdx) {
-  if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
-  liveResponses = [];
-  updateLiveCount(0);
-  const q = query(
-    collection(db, 'sessions', currentProject.id, 'responses'),
-    where('questionIdx', '==', questionIdx)
-  );
-  firestoreUnsubscribe = onSnapshot(q, snapshot => {
-    liveResponses = snapshot.docs.map(d => d.data().text).filter(Boolean);
-    updateLiveCount(liveResponses.length);
-  }, err => console.warn('Firestore listener error:', err));
-}
-
-function updateLiveCount(n) {
-  document.getElementById('live-count-num').textContent = n;
-  const btn = document.getElementById('btn-import-live');
-  btn.textContent = `↓ Import responses (${n})`;
-  btn.disabled = n === 0;
-}
-
-document.getElementById('btn-import-live').addEventListener('click', () => {
-  if (!liveResponses.length) return;
-  respTa.value = liveResponses.join('\n');
-  responsesMap[activeQuestionIdx] = respTa.value;
-  updateResponseCount();
-  showToast(`${liveResponses.length} responses imported`, 'success');
-});
-
-// ===== RESPONSE AREA =====
 function updateResponseCount() {
   const n = countLines(respTa.value);
-  document.getElementById('resp-count').textContent = `${n} response${n!==1?'s':''}`;
-  document.getElementById('resp-count').classList.toggle('has-items', n>0);
+  respCount.textContent = n === 1 ? '1 response' : `${n} responses`;
+  respCount.classList.toggle('has-items', n > 0);
   updateSynthButton();
 }
 
 function updateSynthButton() {
   const n = countLines(respTa.value);
-  const ok = n>=2 && !isLoading;
-  btnSynth.className = ok?'ready':'disabled';
-  btnSynth.innerHTML = isLoading ? '<span style="display:inline-block;animation:spin .8s linear infinite">⟳</span> Synthesising…' : '✦ Synthesise';
+  const ok = n >= 2 && !isLoading;
+  btnSynth.className = ok ? 'ready' : 'disabled';
+  btnSynth.innerHTML = isLoading
+    ? '<span style="display:inline-block;animation:spin .8s linear infinite">⟳</span> Synthesising…'
+    : '✦ Synthesise';
 }
 
+function countLines(text) { return text.split('\n').filter(l => l.trim()).length; }
 function showError(msg) {
   const el = document.getElementById('error-msg');
-  el.style.display = msg?'block':'none';
+  el.style.display = msg ? 'block' : 'none';
   if (msg) el.textContent = msg;
 }
 
-// ===== SYNTHESIS =====
+// ==================== SYNTHESIS (improved prompt) ====================
 async function synthesise() {
   if (isLoading) return;
   const text = respTa.value;
-  if (countLines(text) < 2) { showError('Minimum 2 responses required.'); return; }
+  const n = countLines(text);
+  if (n < 2) { showError('Minimum 2 responses required.'); return; }
   showError(null);
   responsesMap[activeQuestionIdx] = text;
-  isLoading = true; updateSynthButton();
-  const synthEmpty = document.getElementById('synth-empty');
-  const synthLoading = document.getElementById('synth-loading');
-  // Switch to synth panel for loading state
-  document.getElementById('qr-panel').style.display='none';
-  document.getElementById('synth-panel').style.display='flex';
-  document.getElementById('right-head-label').textContent='Synthesis';
-  document.getElementById('themes-list').innerHTML='';
-  document.getElementById('mood-card').style.display='none';
-  synthEmpty.style.display='none'; synthLoading.style.display='flex';
-  const q = currentProject.questions[activeQuestionIdx];
-  const lines = text.split('\n').filter(l=>l.trim()).join('\n');
-  const ctx = [currentProject.org, currentProject.location].filter(Boolean).join(', ');
+  isLoading = true;
+  updateSynthButton();
+  synthEmpty.style.display = 'none';
+  themesList.innerHTML = '';
+  moodCard.style.display = 'none';
+  synthLoading.style.display = 'flex';
+
+  const q   = currentProject.questions[activeQuestionIdx];
+  const lines = text.split('\n').filter(l => l.trim()).join('\n');
+  const org  = currentProject.org || '';
+  const loc  = currentProject.location || '';
+  const ctx  = [org, loc].filter(Boolean).join(', ');
+
+  // Build a context string for the meeting
+  const meetingCtx = ctx
+    ? `This session was held at ${ctx}.`
+    : 'This is an LGBTI community session.';
+
+  const prompt = `You are synthesising anonymous responses from a closed trans community meeting facilitated by Single Step Foundation (SSF), an LGBTI organisation in Bulgaria. ${meetingCtx}
+
+The session is responding to the CJEU C-43/24 Shipova ruling on legal gender recognition in Bulgaria. Participants are trans people sharing their lived experiences. Treat every response with care — these are real people describing real impact.
+
+Question asked: "${q.text}"
+
+Responses (${n} total, one per line):
+${lines}
+
+Identify 3–5 meaningful themes. Rules:
+- Responses may be in Bulgarian or English — match the language of the majority, do not translate quotes
+- Preserve the emotional weight and specific language of responses; do not sanitise distress or anger
+- Quotes must be verbatim from the input — never paraphrase or translate them
+- Percentages must sum to exactly 100
+- Be specific and non-reductive; avoid vague umbrella labels
+- If responses describe legal, medical, psychological, or social impacts, name them precisely
+
+Respond ONLY with valid JSON, no markdown fences:
+{
+  "themes": [
+    {
+      "label": "concise theme name",
+      "percentage": 40,
+      "count": 8,
+      "summary": "one sentence capturing the core of this cluster, specific and direct",
+      "quotes": ["verbatim quote from responses", "another verbatim quote"]
+    }
+  ],
+  "overall_mood": "2–4 word emotional tone of the group",
+  "key_insight": "The single most important takeaway in 1–2 sentences. Be direct, specific, and grounded in what participants actually said."
+}`;
+
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:`You are synthesising anonymous responses collected at a community meeting${ctx?` (${ctx})`:''}.\n\nQuestion: "${q.text}"\n\nResponses (${countLines(text)} total):\n${lines}\n\nIdentify 3–5 meaningful themes. Respond ONLY with valid JSON, no fences:\n{"themes":[{"label":"concise name","percentage":40,"count":8,"summary":"one sentence","quotes":["verbatim quote","another"]}],"overall_mood":"2–4 word tone","key_insight":"1–2 sentence key takeaway."}\n\nRules: percentages sum to 100. Same language as responses. Quotes verbatim. Be accurate and sensitive.`}]})
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1200,
+        messages: [{role:"user", content: prompt}]
+      })
     });
-    if (!res.ok) throw new Error(`API ${res.status}`);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
     const data = await res.json();
-    const raw = (data.content.find(b=>b.type==='text')||{}).text||'';
-    const synth = JSON.parse(raw.replace(/```json\n?|```\n?/g,'').trim());
+    const raw  = (data.content.find(b => b.type === 'text') || {}).text || '';
+    const clean = raw.replace(/```json\n?|```\n?/g, '').trim();
+    const synth = JSON.parse(clean);
     synthesisMap[activeQuestionIdx] = synth;
     saveSessionToProject();
     updateSynthPanel(synth);
     updateCenter();
     buildSidebar();
   } catch(e) {
-    showError('Synthesis failed: '+e.message);
-    synthLoading.style.display='none'; synthEmpty.style.display='flex';
-    document.getElementById('qr-panel').style.display='flex';
-    document.getElementById('synth-panel').style.display='none';
-    document.getElementById('right-head-label').textContent='Participants';
-  } finally { isLoading=false; updateSynthButton(); }
+    showError('Synthesis failed: ' + e.message);
+    synthLoading.style.display = 'none';
+    synthEmpty.style.display = 'flex';
+  } finally {
+    isLoading = false;
+    updateSynthButton();
+  }
 }
 
 function updateSynthPanel(synth) {
-  const synthEmpty = document.getElementById('synth-empty');
-  const synthLoading = document.getElementById('synth-loading');
-  const moodCard = document.getElementById('mood-card');
-  const themesList = document.getElementById('themes-list');
-  themesList.innerHTML='';
-  if (!synth) { synthEmpty.style.display='flex'; synthLoading.style.display='none'; moodCard.style.display='none'; return; }
-  synthEmpty.style.display='none'; synthLoading.style.display='none'; moodCard.style.display='block';
-  document.getElementById('mood-badge').textContent = synth.overall_mood;
-  document.getElementById('key-insight').textContent = synth.key_insight;
-  synth.themes.forEach((t, i) => {
-    const el = document.createElement('div');
-    el.className = 'tc fade-in';
-    el.innerHTML = `<div class="tc-top"><span class="tc-label">${escHtml(t.label)}</span><span class="tc-pct">${t.percentage}% · ${t.count}</span></div><div class="tc-bar-track"><div class="tc-bar-fill" style="transition-delay:${i*120}ms"></div></div><div class="tc-summary">${escHtml(t.summary)}</div><div class="tc-quotes">${(t.quotes||[]).slice(0,2).map(q=>`<div class="tc-quote">"${escHtml(q)}"</div>`).join('')}</div>`;
-    themesList.appendChild(el);
-    requestAnimationFrame(()=>setTimeout(()=>{ const f=el.querySelector('.tc-bar-fill'); if(f)f.style.width=t.percentage+'%'; },80+i*120));
-  });
+  themesList.innerHTML = '';
+  if (!synth) {
+    synthEmpty.style.display = 'flex';
+    synthLoading.style.display = 'none';
+    moodCard.style.display = 'none';
+    return;
+  }
+  synthEmpty.style.display = 'none';
+  synthLoading.style.display = 'none';
+  moodCard.style.display = 'block';
+  moodBadge.textContent  = synth.overall_mood;
+  keyInsight.textContent = synth.key_insight;
+  synth.themes.forEach((t, i) => themesList.appendChild(createThemeSmall(t, i * 120)));
 }
 
-// ===== PROJECTION =====
+function createThemeSmall(theme, delay) {
+  const el = document.createElement('div');
+  el.className = 'tc fade-in';
+  el.innerHTML = `
+    <div class="tc-top">
+      <span class="tc-label">${escHtml(theme.label)}</span>
+      <span class="tc-pct">${theme.percentage}% · ${theme.count}</span>
+    </div>
+    <div class="tc-bar-track"><div class="tc-bar-fill" style="transition-delay:${delay}ms"></div></div>
+    <div class="tc-summary">${escHtml(theme.summary)}</div>
+    <div class="tc-quotes">${(theme.quotes||[]).slice(0,2).map(q=>`<div class="tc-quote">"${escHtml(q)}"</div>`).join('')}</div>
+  `;
+  requestAnimationFrame(() => setTimeout(() => {
+    const f = el.querySelector('.tc-bar-fill');
+    if (f) f.style.width = theme.percentage + '%';
+  }, 80 + delay));
+  return el;
+}
+
+// ==================== PROJECTION ====================
 function showProjection() {
   const synth = synthesisMap[activeQuestionIdx];
   if (!synth) return;
   const q = currentProject.questions[activeQuestionIdx];
-  document.getElementById('proj-q-meta').textContent = `Question ${activeQuestionIdx+1} of ${currentProject.questions.length} · ${countLines(responsesMap[activeQuestionIdx]||'')} responses`;
-  document.getElementById('proj-q-text').textContent = q.text;
-  document.getElementById('proj-mood').textContent = synth.overall_mood;
-  document.getElementById('proj-insight').textContent = synth.key_insight;
-  const cols = synth.themes.length<=2?synth.themes.length:synth.themes.length===3?3:2;
-  const projGrid = document.getElementById('proj-grid');
-  projGrid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  const n = countLines(responsesMap[activeQuestionIdx] || '');
+  projQMeta.textContent = `Question ${activeQuestionIdx+1} of ${currentProject.questions.length} · ${n} responses`;
+  projQText.textContent = q.text;
+  projMood.textContent    = synth.overall_mood;
+  projInsight.textContent = synth.key_insight;
+  const cols = synth.themes.length <= 2 ? synth.themes.length : synth.themes.length === 3 ? 3 : 2;
+  projGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   projGrid.innerHTML = '';
   synth.themes.forEach((t, i) => {
     const el = document.createElement('div');
-    el.className = 'tc-big fade-in'; el.style.animationDelay=`${i*80}ms`;
-    el.innerHTML = `<div class="tc-big-watermark">${t.percentage}%</div><div class="tc-big-label">${escHtml(t.label)}</div><div class="tc-big-bar-track"><div class="tc-big-bar-fill" style="transition-delay:${100+i*150}ms"></div></div><div class="tc-big-summary">${escHtml(t.summary)}</div><div class="tc-big-quotes">${(t.quotes||[]).slice(0,2).map(q=>`<div class="tc-big-quote">"${escHtml(q)}"</div>`).join('')}</div>`;
+    el.className = 'tc-big fade-in';
+    el.style.animationDelay = `${i*80}ms`;
+    el.innerHTML = `
+      <div class="tc-big-watermark">${t.percentage}%</div>
+      <div class="tc-big-label">${escHtml(t.label)}</div>
+      <div class="tc-big-bar-track"><div class="tc-big-bar-fill" style="transition-delay:${100+i*150}ms"></div></div>
+      <div class="tc-big-summary">${escHtml(t.summary)}</div>
+      <div class="tc-big-quotes">${(t.quotes||[]).slice(0,2).map(q=>`<div class="tc-big-quote">"${escHtml(q)}"</div>`).join('')}</div>
+    `;
     projGrid.appendChild(el);
-    requestAnimationFrame(()=>setTimeout(()=>{ const f=el.querySelector('.tc-big-bar-fill'); if(f)f.style.width=t.percentage+'%'; },120+i*150));
+    requestAnimationFrame(() => setTimeout(() => {
+      const f = el.querySelector('.tc-big-bar-fill');
+      if (f) f.style.width = t.percentage + '%';
+    }, 120 + i*150));
   });
-  const meta=[currentProject.org,currentProject.name,currentProject.date].filter(Boolean).join(' · ');
+  const meta = [currentProject.org, currentProject.name, currentProject.date].filter(Boolean).join(' · ');
   document.getElementById('proj-footer-l').textContent = meta.toUpperCase();
-  document.getElementById('proj-footer-r').textContent = currentProject.projFooter||'Confidential · For participants only';
-  document.getElementById('projection').classList.add('active');
-  try { document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); } catch(e){}
+  document.getElementById('proj-footer-r').textContent = currentProject.projFooter || 'Confidential · For participants only';
+  projection.classList.add('active');
+  try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } catch(e) {}
 }
 
 function hideProjection() {
-  document.getElementById('projection').classList.remove('active');
-  try { document.exitFullscreen&&document.fullscreenElement&&document.exitFullscreen(); } catch(e){}
+  projection.classList.remove('active');
+  try { document.exitFullscreen && document.fullscreenElement && document.exitFullscreen(); } catch(e) {}
 }
 
-// ===== RESULTS =====
+// ==================== RESULTS SCREEN ====================
 function openResults() {
-  document.getElementById('results-title').textContent = currentProject.name;
   const body = document.getElementById('results-body');
-  body.innerHTML='';
-  currentProject.questions.forEach((q,i) => {
+  document.getElementById('results-title').textContent = currentProject.name;
+  body.innerHTML = '';
+  currentProject.questions.forEach((q, i) => {
     const synth = synthesisMap[i];
     const block = document.createElement('div');
-    block.className='result-block fade-up'; block.style.animationDelay=`${i*40}ms`;
+    block.className = 'result-block fade-up';
+    block.style.animationDelay = `${i*40}ms`;
     if (!synth) {
-      block.innerHTML=`<div class="result-block-head"><div><div class="result-block-qnum">Question ${i+1}</div><div class="result-block-q">${escHtml(q.text)}</div></div></div><div class="result-skip">Not synthesised</div>`;
+      block.innerHTML = `
+        <div class="result-block-head"><div>
+          <div class="result-block-qnum">Question ${i+1}</div>
+          <div class="result-block-q">${escHtml(q.text)}</div>
+        </div></div>
+        <div class="result-skip">Not synthesised</div>
+      `;
     } else {
       const n = countLines((currentProject.responses||{})[i]||'');
-      block.innerHTML=`<div class="result-block-head"><div><div class="result-block-qnum">Question ${i+1} · ${n} responses</div><div class="result-block-q">${escHtml(q.text)}</div></div><div class="result-block-meta"><div class="result-mood-tag">${escHtml(synth.overall_mood)}</div><div class="result-insight">${escHtml(synth.key_insight)}</div></div></div><div class="result-themes">${synth.themes.map(t=>`<div class="result-theme"><div class="result-theme-bar-col"><span class="result-theme-pct">${t.percentage}%</span><div class="result-theme-bar-v" style="height:${Math.max(20,t.percentage)}px"></div></div><div class="result-theme-content"><div class="result-theme-label">${escHtml(t.label)}</div><div class="result-theme-summary">${escHtml(t.summary)}</div><div class="result-theme-quotes">${(t.quotes||[]).slice(0,3).map(qo=>`<div class="result-theme-quote">"${escHtml(qo)}"</div>`).join('')}</div></div></div>`).join('')}</div>`;
+      block.innerHTML = `
+        <div class="result-block-head">
+          <div>
+            <div class="result-block-qnum">Question ${i+1} · ${n} responses</div>
+            <div class="result-block-q">${escHtml(q.text)}</div>
+          </div>
+          <div class="result-block-meta">
+            <div class="result-mood-tag">${escHtml(synth.overall_mood)}</div>
+            <div class="result-insight">${escHtml(synth.key_insight)}</div>
+          </div>
+        </div>
+        <div class="result-themes">
+          ${synth.themes.map(t => `
+            <div class="result-theme">
+              <div class="result-theme-bar-col">
+                <span class="result-theme-pct">${t.percentage}%</span>
+                <div class="result-theme-bar-v" style="height:${Math.max(20, t.percentage)}px"></div>
+              </div>
+              <div class="result-theme-content">
+                <div class="result-theme-label">${escHtml(t.label)}</div>
+                <div class="result-theme-summary">${escHtml(t.summary)}</div>
+                <div class="result-theme-quotes">
+                  ${(t.quotes||[]).slice(0,3).map(qo=>`<div class="result-theme-quote">"${escHtml(qo)}"</div>`).join('')}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
     }
     body.appendChild(block);
   });
   showScreen('results-screen');
 }
 
-// ===== EXPORT =====
-function downloadFile(content, filename, type) {
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([content],{type}));
-  a.download=filename; a.click(); URL.revokeObjectURL(a.href);
-}
-
-document.getElementById('btn-export-json').addEventListener('click', () => {
-  const data={session:{name:currentProject.name,org:currentProject.org,date:currentProject.date,location:currentProject.location,exportedAt:new Date().toISOString()},questions:currentProject.questions.map((q,i)=>({number:i+1,text:q.text,responseCount:countLines((currentProject.responses||{})[i]||''),synthesis:synthesisMap[i]||null}))};
-  downloadFile(JSON.stringify(data,null,2),`${currentProject.name.replace(/[^a-z0-9]/gi,'_')}_results.json`,'application/json');
-  showToast('JSON exported','success');
+// ==================== EXPORT ====================
+document.getElementById('btn-export-results').addEventListener('click', () => {
+  const data = {
+    session: {name: currentProject.name, org: currentProject.org, date: currentProject.date, location: currentProject.location, roomCode: currentProject.roomCode || null, exportedAt: new Date().toISOString()},
+    questions: currentProject.questions.map((q, i) => ({
+      number: i+1, text: q.text, answersPerPerson: q.count || 1,
+      responseCount: countLines((currentProject.responses||{})[i]||''),
+      synthesis: synthesisMap[i] || null
+    }))
+  };
+  downloadFile(JSON.stringify(data, null, 2), `${currentProject.name.replace(/[^a-z0-9]/gi,'_')}_results.json`, 'application/json');
+  showToast('JSON exported', 'success');
 });
 
 document.getElementById('btn-export-text').addEventListener('click', () => {
-  let text=`${currentProject.name}\n${[currentProject.org,currentProject.date].filter(Boolean).join(' · ')}\n\n${'='.repeat(60)}\n\n`;
-  currentProject.questions.forEach((q,i)=>{
-    const synth=synthesisMap[i];
-    text+=`QUESTION ${i+1}\n${q.text}\n\n`;
-    if(!synth){text+='[Not synthesised]\n\n';return;}
-    text+=`Mood: ${synth.overall_mood}\nKey insight: ${synth.key_insight}\n\n`;
-    synth.themes.forEach(t=>{ text+=`  ${t.label} (${t.percentage}%)\n  ${t.summary}\n${(t.quotes||[]).slice(0,2).map(qo=>`    • "${qo}"`).join('\n')}\n\n`; });
-    text+=`${'-'.repeat(60)}\n\n`;
+  let text = `${currentProject.name}\n`;
+  if (currentProject.org) text += `${currentProject.org}\n`;
+  if (currentProject.date) text += `${currentProject.date}\n`;
+  text += '\n' + '='.repeat(60) + '\n\n';
+  currentProject.questions.forEach((q, i) => {
+    const synth = synthesisMap[i];
+    text += `QUESTION ${i+1}\n${q.text}\n\n`;
+    if (!synth) { text += '[Not synthesised]\n\n'; return; }
+    text += `Overall mood: ${synth.overall_mood}\n`;
+    text += `Key insight: ${synth.key_insight}\n\n`;
+    synth.themes.forEach(t => {
+      text += `  ${t.label} (${t.percentage}%)\n  ${t.summary}\n`;
+      (t.quotes||[]).slice(0,2).forEach(qo => { text += `    • "${qo}"\n`; });
+      text += '\n';
+    });
+    text += '-'.repeat(60) + '\n\n';
   });
-  downloadFile(text,`${currentProject.name.replace(/[^a-z0-9]/gi,'_')}_results.txt`,'text/plain');
-  showToast('Text exported','success');
+  downloadFile(text, `${currentProject.name.replace(/[^a-z0-9]/gi,'_')}_results.txt`, 'text/plain');
+  showToast('Text exported', 'success');
 });
 
-// ===== MODAL =====
+function downloadFile(content, filename, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type}));
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ==================== PARTICIPANT MODE ====================
+let participantSession = null;
+let participantQIdx = 0;
+let participantStepIdx = 0;
+let participantAnswers = {};
+
+async function initParticipantMode() {
+  showScreen('participant-screen');
+  document.getElementById('part-header').style.display = 'none';
+  renderPartState('loading');
+
+  if (!isFirebaseReady()) {
+    renderPartState('error', 'Firebase is not configured on this app. Please ask the event organiser for help.');
+    return;
+  }
+
+  try {
+    const snapshot = await db.ref(`community_voice/sessions/${ROOM_PARAM}`).once('value');
+    const session = snapshot.val();
+    if (!session || !session.questions || !session.questions.length) {
+      renderPartState('error', 'This room was not found. Please check the link and try again, or ask the facilitator for the correct URL.');
+      return;
+    }
+    participantSession = session;
+    participantQIdx = 0;
+    participantStepIdx = 0;
+    participantAnswers = {};
+    session.questions.forEach((q, i) => { participantAnswers[i] = []; });
+    renderPartState('welcome');
+  } catch(e) {
+    renderPartState('error', 'Could not connect to the session. Please check your internet connection and try again.');
+  }
+}
+
+function renderPartState(state, msg) {
+  const content = document.getElementById('part-content');
+  const header  = document.getElementById('part-header');
+
+  if (state === 'loading') {
+    header.style.display = 'none';
+    content.innerHTML = `
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;min-height:100vh">
+        <div style="width:40px;height:40px;border-radius:50%;border:3px solid var(--s3);border-top-color:var(--gold);animation:spin .8s linear infinite"></div>
+        <div style="font-size:13px;color:var(--ts)">Joining session…</div>
+      </div>`;
+    return;
+  }
+
+  if (state === 'error') {
+    header.style.display = 'none';
+    content.innerHTML = `
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:40px;text-align:center;min-height:100vh">
+        <div style="font-size:40px;opacity:.7">⚠️</div>
+        <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:500;color:var(--text)">Can't join session</div>
+        <div style="font-size:14px;color:var(--ts);line-height:1.6;max-width:300px">${escHtml(msg || 'An unknown error occurred.')}</div>
+      </div>`;
+    return;
+  }
+
+  if (state === 'welcome') {
+    header.style.display = 'none';
+    const s = participantSession;
+    const totalSteps = s.questions.reduce((sum, q) => sum + (q.count || 1), 0);
+    content.innerHTML = `
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;padding:48px 28px;text-align:center;min-height:100vh">
+        <div style="font-family:'Fraunces',serif;font-size:52px;color:var(--gold);line-height:1;animation:fadeIn .5s ease">✦</div>
+        <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:500;color:var(--text);line-height:1.3">Community Voice</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text)">${escHtml(s.name)}</div>
+        <div style="font-size:13px;color:var(--ts);line-height:1.6">${[s.org, s.date, s.location].filter(Boolean).map(escHtml).join(' · ')}</div>
+        <div style="font-size:13px;color:var(--tm);line-height:1.7;max-width:300px;margin-top:4px">
+          You'll answer ${s.questions.length} question${s.questions.length !== 1 ? 's' : ''} 
+          (${totalSteps} input${totalSteps !== 1 ? 's' : ''} total). Your responses are anonymous.
+        </div>
+        <button onclick="startParticipantFlow()" style="background:linear-gradient(135deg,var(--gold),var(--gold-b));border:none;border-radius:14px;padding:16px 52px;color:#080C18;font-weight:700;font-size:17px;margin-top:8px;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.01em">
+          Begin →
+        </button>
+        <div style="font-size:10px;color:var(--tm);font-family:'DM Mono',monospace;letter-spacing:.08em;margin-top:4px">🔒 ANONYMOUS · ${s.org ? escHtml(s.org).toUpperCase() : 'SSF'}</div>
+      </div>`;
+    return;
+  }
+
+  if (state === 'submitting') {
+    header.style.display = 'none';
+    content.innerHTML = `
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;min-height:100vh">
+        <div style="width:40px;height:40px;border-radius:50%;border:3px solid var(--s3);border-top-color:var(--gold);animation:spin .8s linear infinite"></div>
+        <div style="font-size:14px;color:var(--ts)">Submitting your responses…</div>
+      </div>`;
+    return;
+  }
+
+  if (state === 'done') {
+    header.style.display = 'none';
+    const s = participantSession;
+    content.innerHTML = `
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;padding:48px 28px;text-align:center;min-height:100vh">
+        <div style="font-size:52px;animation:fadeIn .4s ease">✓</div>
+        <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:500;color:var(--ok)">Thank you</div>
+        <div style="font-size:15px;color:var(--ts);line-height:1.7;max-width:300px">
+          Your responses have been submitted. They'll be synthesised live during the session.
+        </div>
+        ${s.org ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.1em;margin-top:24px">${escHtml(s.org).toUpperCase()}</div>` : ''}
+      </div>`;
+    return;
+  }
+
+  if (state === 'submit-error') {
+    header.style.display = 'none';
+    content.innerHTML = `
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:40px;text-align:center;min-height:100vh">
+        <div style="font-size:40px">⚠️</div>
+        <div style="font-family:'Fraunces',serif;font-size:20px;color:var(--text)">Submission failed</div>
+        <div style="font-size:14px;color:var(--ts);line-height:1.6;max-width:280px">Please check your internet connection and try again.</div>
+        <button onclick="submitParticipantAnswers()" style="background:var(--gold);border:none;border-radius:10px;padding:12px 28px;color:#080C18;font-weight:600;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px">Retry</button>
+      </div>`;
+    return;
+  }
+}
+
+function startParticipantFlow() {
+  participantQIdx = 0;
+  participantStepIdx = 0;
+  renderPartInput();
+}
+
+function getTotalSteps() {
+  return participantSession.questions.reduce((sum, q) => sum + (q.count || 1), 0);
+}
+
+function getCurrentGlobalStep() {
+  let step = 0;
+  for (let i = 0; i < participantQIdx; i++) step += participantSession.questions[i].count || 1;
+  return step + participantStepIdx;
+}
+
+function isLastPartStep() {
+  const qs = participantSession.questions;
+  return participantQIdx === qs.length - 1 && participantStepIdx === (qs[qs.length - 1].count || 1) - 1;
+}
+
+const ORDINALS = ['First','Second','Third','Fourth','Fifth','Sixth','Seventh','Eighth','Ninth','Tenth'];
+
+function renderPartInput() {
+  const s     = participantSession;
+  const q     = s.questions[participantQIdx];
+  const count = q.count || 1;
+  const total = getTotalSteps();
+  const cur   = getCurrentGlobalStep();
+  const pct   = Math.round((cur / total) * 100);
+  const isLast = isLastPartStep();
+
+  const header = document.getElementById('part-header');
+  header.style.display = 'block';
+  document.getElementById('part-session-name').textContent = s.name.toUpperCase();
+
+  const stepMeta = count > 1
+    ? `QUESTION ${participantQIdx + 1} OF ${s.questions.length} &nbsp;·&nbsp; ANSWER ${participantStepIdx + 1} OF ${count}`
+    : `QUESTION ${participantQIdx + 1} OF ${s.questions.length}`;
+
+  const ordinal = ORDINALS[participantStepIdx] || `${participantStepIdx + 1}th`;
+  const stepHint = count > 1
+    ? `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">↳ ${ordinal} answer</div>`
+    : '';
+
+  const remaining = count - participantStepIdx - 1;
+  const remainHint = count > 1
+    ? `<div style="font-size:11px;color:var(--tm);font-family:'DM Mono',monospace;text-align:center">${remaining > 0 ? `${remaining} more answer${remaining !== 1 ? 's' : ''} for this question after this` : 'Last answer for this question'}</div>`
+    : '';
+
+  const btnLabel = isLast ? 'Submit responses ✓' : (remaining > 0 ? 'Next answer →' : 'Next question →');
+
+  const content = document.getElementById('part-content');
+  content.innerHTML = `
+    <div style="padding:16px 24px 0;flex-shrink:0">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">${stepMeta}</div>
+      <div style="height:3px;background:var(--s3);border-radius:2px">
+        <div style="height:100%;background:linear-gradient(90deg,var(--gold),var(--teal));border-radius:2px;width:${pct}%;transition:width .4s ease"></div>
+      </div>
+    </div>
+    <div style="flex:1;padding:24px 24px 12px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'Fraunces',serif;font-size:clamp(19px,5vw,25px);font-weight:500;color:var(--text);line-height:1.4">${escHtml(q.text)}</div>
+      ${stepHint}
+      <textarea id="part-ta"
+        style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:16px 18px;color:var(--text);font-size:16px;line-height:1.6;resize:none;min-height:130px;font-family:'DM Sans',sans-serif;outline:none;-webkit-appearance:none"
+        placeholder="${count > 1 ? `Answer ${participantStepIdx + 1} of ${count}…` : 'Your response…'}"
+        oninput="this.style.borderColor='var(--gold)'"
+      ></textarea>
+      ${remainHint}
+    </div>
+    <div style="padding:0 24px 16px;flex-shrink:0;display:flex;flex-direction:column;gap:10px">
+      <button id="btn-part-next" onclick="advanceParticipant()"
+        style="width:100%;background:linear-gradient(135deg,var(--gold),var(--gold-b));border:none;border-radius:14px;padding:16px;color:#080C18;font-weight:700;font-size:16px;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.01em">
+        ${escHtml(btnLabel)}
+      </button>
+      <div style="text-align:center;font-size:11px;color:var(--tm);font-family:'DM Mono',monospace">🔒 Anonymous · Enter or tap to continue</div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    const ta = document.getElementById('part-ta');
+    if (ta) {
+      ta.focus();
+      ta.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); advanceParticipant(); }
+      });
+    }
+  }, 80);
+}
+
+function advanceParticipant() {
+  const ta  = document.getElementById('part-ta');
+  const val = (ta ? ta.value : '').trim();
+
+  if (!participantAnswers[participantQIdx]) participantAnswers[participantQIdx] = [];
+  participantAnswers[participantQIdx][participantStepIdx] = val;
+
+  const q = participantSession.questions[participantQIdx];
+  const count = q.count || 1;
+
+  if (participantStepIdx < count - 1) {
+    participantStepIdx++;
+    renderPartInput();
+  } else {
+    participantQIdx++;
+    participantStepIdx = 0;
+    if (participantQIdx < participantSession.questions.length) {
+      renderPartInput();
+    } else {
+      submitParticipantAnswers();
+    }
+  }
+}
+
+async function submitParticipantAnswers() {
+  renderPartState('submitting');
+  const pid = getParticipantId();
+  try {
+    if (isFirebaseReady()) {
+      const updates = {};
+      participantSession.questions.forEach((q, i) => {
+        const answers = (participantAnswers[i] || []).filter(a => a && a.trim());
+        const newKey  = db.ref().push().key;
+        updates[`community_voice/responses/${ROOM_PARAM}/q${i}/${newKey}`] = {
+          answers,
+          submittedAt: firebase.database.ServerValue.TIMESTAMP,
+          pid
+        };
+      });
+      await db.ref().update(updates);
+    }
+    renderPartState('done');
+  } catch(e) {
+    console.error('Submission error:', e);
+    renderPartState('submit-error');
+  }
+}
+
+// ==================== MODAL ====================
 function showModal(title, body, buttons) {
-  document.getElementById('modal-title').textContent=title;
-  document.getElementById('modal-body').innerHTML=body;
-  const acts=document.getElementById('modal-actions'); acts.innerHTML='';
-  buttons.forEach(b=>{ const btn=document.createElement('button'); btn.className=b.cls; btn.textContent=b.label; btn.onclick=()=>{ document.getElementById('modal-overlay').classList.remove('active'); if(b.action)b.action(); }; acts.appendChild(btn); });
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  const acts = document.getElementById('modal-actions');
+  acts.innerHTML = '';
+  buttons.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = b.cls;
+    btn.textContent = b.label;
+    btn.onclick = () => {
+      document.getElementById('modal-overlay').classList.remove('active');
+      if (b.action) b.action();
+    };
+    acts.appendChild(btn);
+  });
   document.getElementById('modal-overlay').classList.add('active');
 }
-document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target===e.currentTarget)e.currentTarget.classList.remove('active'); });
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+});
 
-// ===== TOAST =====
-let toastTimer=null;
-function showToast(msg,type='success') {
-  const el=document.getElementById('toast');
-  el.querySelector('.toast-icon').textContent=type==='success'?'✓':'✕';
-  document.getElementById('toast-msg').textContent=msg;
-  el.className=`active ${type}`; clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>el.classList.remove('active'),2800);
+// ==================== TOAST ====================
+let toastTimer = null;
+function showToast(msg, type='success') {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  el.querySelector('.toast-icon').textContent = type === 'success' ? '✓' : '✕';
+  el.className = `active ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('active'), 2800);
 }
 
-// ===== DOM REFS =====
-const respTa=document.getElementById('resp-ta');
-const btnSynth=document.getElementById('btn-synth');
-const btnProject=document.getElementById('btn-project');
-const btnNext=document.getElementById('btn-next');
-const btnRedo=document.getElementById('btn-redo');
+// ==================== UTILS ====================
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-// ===== EVENTS =====
-respTa.addEventListener('input',()=>{ responsesMap[activeQuestionIdx]=respTa.value; updateResponseCount(); });
-btnSynth.addEventListener('click',()=>{ if(!isLoading&&countLines(respTa.value)>=2)synthesise(); });
-btnProject.addEventListener('click',showProjection);
-document.getElementById('btn-exit').addEventListener('click',hideProjection);
-btnNext.addEventListener('click',()=>{ if(activeQuestionIdx<currentProject.questions.length-1)switchQuestion(activeQuestionIdx+1); });
-btnRedo.addEventListener('click',()=>{ delete synthesisMap[activeQuestionIdx]; updateCenter(); buildSidebar(); saveSessionToProject(); });
-document.getElementById('btn-view-results').addEventListener('click',()=>{ responsesMap[activeQuestionIdx]=respTa.value; saveSessionToProject(); openResults(); });
-document.getElementById('btn-close-session').addEventListener('click',()=>{ responsesMap[activeQuestionIdx]=respTa.value; saveSessionToProject(); if(firestoreUnsubscribe)firestoreUnsubscribe(); showScreen('home-screen'); renderHome(); });
-document.getElementById('btn-results-back').addEventListener('click',()=>showScreen('session-screen'));
-document.addEventListener('fullscreenchange',()=>{ if(!document.fullscreenElement&&document.getElementById('projection').classList.contains('active'))document.getElementById('projection').classList.remove('active'); });
-document.addEventListener('keydown',e=>{
-  if(document.getElementById('projection').classList.contains('active')){ if(e.key==='Escape')hideProjection(); return; }
-  if(document.getElementById('session-screen').classList.contains('active')){
-    if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){ e.preventDefault(); if(!isLoading&&countLines(respTa.value)>=2)synthesise(); }
-    if(e.altKey&&e.key==='ArrowRight'&&activeQuestionIdx<(currentProject?.questions.length||0)-1)switchQuestion(activeQuestionIdx+1);
-    if(e.altKey&&e.key==='ArrowLeft'&&activeQuestionIdx>0)switchQuestion(activeQuestionIdx-1);
+// ==================== DOM REFS ====================
+const respTa      = document.getElementById('resp-ta');
+const respCount   = document.getElementById('resp-count');
+const btnSynth    = document.getElementById('btn-synth');
+const btnProject  = document.getElementById('btn-project');
+const btnNext     = document.getElementById('btn-next');
+const btnRedo     = document.getElementById('btn-redo');
+const synthEmpty  = document.getElementById('synth-empty');
+const synthLoading= document.getElementById('synth-loading');
+const moodCard    = document.getElementById('mood-card');
+const moodBadge   = document.getElementById('mood-badge');
+const keyInsight  = document.getElementById('key-insight');
+const themesList  = document.getElementById('themes-list');
+const progFill    = document.getElementById('prog-fill');
+const progVal     = document.getElementById('prog-val');
+const projection  = document.getElementById('projection');
+const projQMeta   = document.getElementById('proj-q-meta');
+const projQText   = document.getElementById('proj-q-text');
+const projMood    = document.getElementById('proj-mood');
+const projInsight = document.getElementById('proj-insight');
+const projGrid    = document.getElementById('proj-grid');
+
+// ==================== EVENT BINDINGS ====================
+respTa.addEventListener('input', () => { responsesMap[activeQuestionIdx] = respTa.value; updateResponseCount(); });
+btnSynth.addEventListener('click', () => { if (!isLoading && countLines(respTa.value) >= 2) synthesise(); });
+btnProject.addEventListener('click', showProjection);
+document.getElementById('btn-exit').addEventListener('click', hideProjection);
+btnNext.addEventListener('click', () => { if (activeQuestionIdx < currentProject.questions.length - 1) switchQuestion(activeQuestionIdx + 1); });
+btnRedo.addEventListener('click', () => {
+  delete synthesisMap[activeQuestionIdx];
+  updateSynthPanel(null); updateCenter(); buildSidebar(); saveSessionToProject();
+});
+document.getElementById('btn-load-responses').addEventListener('click', loadResponsesFromFirebase);
+document.getElementById('btn-view-results').addEventListener('click', () => { responsesMap[activeQuestionIdx] = respTa.value; saveSessionToProject(); openResults(); });
+document.getElementById('btn-close-session').addEventListener('click', () => {
+  stopRoomListening();
+  responsesMap[activeQuestionIdx] = respTa.value;
+  saveSessionToProject();
+  showScreen('home-screen');
+  renderHome();
+});
+document.getElementById('btn-results-back').addEventListener('click', () => { showScreen('session-screen'); });
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && projection.classList.contains('active')) projection.classList.remove('active');
+});
+document.addEventListener('keydown', e => {
+  if (projection.classList.contains('active')) { if (e.key === 'Escape') hideProjection(); return; }
+  if (document.getElementById('session-screen').classList.contains('active')) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (!isLoading && countLines(respTa.value) >= 2) synthesise(); }
+    if (e.altKey && e.key === 'ArrowRight' && activeQuestionIdx < (currentProject?.questions.length||0) - 1) switchQuestion(activeQuestionIdx + 1);
+    if (e.altKey && e.key === 'ArrowLeft' && activeQuestionIdx > 0) switchQuestion(activeQuestionIdx - 1);
   }
 });
 
-// ===== INIT =====
-loadFromStorage();
-renderHome();
+// ==================== INIT ====================
+initFirebase();
+
+if (IS_PARTICIPANT) {
+  // Participant mode: skip home screen, go straight to room
+  initParticipantMode();
+} else {
+  // Facilitator mode: normal app
+  loadFromStorage();
+  renderHome();
+}
 </script>
 </body>
 </html>
