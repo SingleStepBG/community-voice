@@ -370,7 +370,10 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
       <div id="home-logo">✦ Community Voice</div>
       <div id="home-tagline">RESPONSE SYNTHESIS TOOL · BY SSF</div>
     </div>
-    <button id="btn-new-project">+ New Session</button>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button id="btn-configure-api" style="background:transparent;border:1px solid var(--border);border-radius:10px;padding:11px 18px;color:var(--ts);font-size:13px;">⚙ API Key</button>
+      <button id="btn-new-project">+ New Session</button>
+    </div>
   </div>
   <div id="home-body">
     <div id="home-empty" style="display:none">
@@ -649,6 +652,23 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
 </div>
 
 
+
+<!-- ====== API KEY MODAL ====== -->
+<div id="api-key-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:#0E1525;border:1px solid #263859;border-radius:16px;padding:28px 32px;width:90%;max-width:480px;display:flex;flex-direction:column;gap:16px">
+    <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:500;color:#E4EDFF">Anthropic API Key</div>
+    <div style="font-size:13px;color:#7A90C0;line-height:1.6">
+      Paste your API key below. It will be saved in your browser only — it never appears in the code or on GitHub.<br><br>
+      <em style="color:#3A4E72">Get it from: platform.anthropic.com → API Keys → Create Key</em>
+    </div>
+    <input id="api-key-input" type="password" style="background:#141D30;border:1px solid #1E2D45;border-radius:10px;padding:12px 14px;color:#E4EDFF;font-family:'DM Mono',monospace;font-size:13px;outline:none;width:100%" placeholder="sk-ant-...">
+    <div id="api-key-err" style="display:none;font-size:12px;color:#F87171;background:#2E0C0C;border-radius:8px;padding:8px 12px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button id="btn-api-cancel" style="background:transparent;border:1px solid #1E2D45;border-radius:8px;padding:9px 18px;font-size:13px;color:#7A90C0;cursor:pointer">Cancel</button>
+      <button id="btn-api-save" style="background:#E8A83E;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;color:#080C18;cursor:pointer">Save Key</button>
+    </div>
+  </div>
+</div>
 <!-- ====== FIREBASE CONFIG MODAL ====== -->
 <div id="fb-config-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;align-items:center;justify-content:center">
   <div style="background:#0E1525;border:1px solid #263859;border-radius:16px;padding:28px 32px;width:90%;max-width:520px;display:flex;flex-direction:column;gap:16px">
@@ -691,9 +711,7 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
     };
     localStorage.setItem('cv_firebase_config', JSON.stringify(knownConfig));
   }
-  if (!localStorage.getItem('cv_anthropic_key')) {
-    localStorage.setItem('cv_anthropic_key', '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');
-  }
+
 })();
 
 const FIREBASE_CONFIG_KEY = 'cv_firebase_config';
@@ -1589,7 +1607,8 @@ Rules: percentages must sum to 100. Match the language(s) of the responses. Quot
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
-    const apiKey = localStorage.getItem('cv_anthropic_key') || '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';
+    const apiKey = localStorage.getItem('cv_anthropic_key') || '';
+    if (!apiKey) { showError('API key not set. Click "Configure API Key" in the home screen.'); isLoading = false; updateSynthButton(); synthLoading.style.display = 'none'; synthEmpty.style.display = 'flex'; return; }
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {"Content-Type":"application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true"},
@@ -2025,6 +2044,46 @@ document.getElementById('btn-fb-save').addEventListener('click', () => {
     errEl.textContent = 'Could not parse config: ' + e.message;
   }
 });
+
+
+// =============================================================
+// API KEY MODAL
+// =============================================================
+function openApiKeyModal() {
+  const modal = document.getElementById('api-key-modal');
+  modal.style.display = 'flex';
+  const saved = localStorage.getItem('cv_anthropic_key') || '';
+  const input = document.getElementById('api-key-input');
+  input.value = saved ? '••••••••••••••••••••' : '';
+  setTimeout(() => { if (!saved) input.focus(); }, 100);
+}
+
+document.getElementById('btn-configure-api').addEventListener('click', openApiKeyModal);
+document.getElementById('btn-api-cancel').addEventListener('click', () => {
+  document.getElementById('api-key-modal').style.display = 'none';
+});
+document.getElementById('btn-api-save').addEventListener('click', () => {
+  const val = document.getElementById('api-key-input').value.trim();
+  const errEl = document.getElementById('api-key-err');
+  errEl.style.display = 'none';
+  if (!val || val.startsWith('•')) {
+    document.getElementById('api-key-modal').style.display = 'none';
+    return;
+  }
+  if (!val.startsWith('sk-ant-')) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Key should start with sk-ant-';
+    return;
+  }
+  localStorage.setItem('cv_anthropic_key', val);
+  document.getElementById('api-key-modal').style.display = 'none';
+  showToast('API key saved', 'success');
+});
+
+// Auto-prompt if no key set
+if (!localStorage.getItem('cv_anthropic_key')) {
+  setTimeout(openApiKeyModal, 800);
+}
 
 // =============================================================
 // INIT
