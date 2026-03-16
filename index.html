@@ -691,6 +691,9 @@ input::placeholder,textarea::placeholder{color:var(--tm)}
     };
     localStorage.setItem('cv_firebase_config', JSON.stringify(knownConfig));
   }
+  if (!localStorage.getItem('cv_anthropic_key')) {
+    localStorage.setItem('cv_anthropic_key', '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');
+  }
 })();
 
 const FIREBASE_CONFIG_KEY = 'cv_firebase_config';
@@ -1586,9 +1589,10 @@ Rules: percentages must sum to 100. Match the language(s) of the responses. Quot
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
+    const apiKey = localStorage.getItem('cv_anthropic_key') || '';
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: {"Content-Type":"application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true"},
       signal: controller.signal,
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
